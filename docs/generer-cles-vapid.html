@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Clés pour les notifications</title>
+<style>
+body{font:16px/1.5 system-ui,sans-serif;max-width:640px;margin:24px auto;padding:0 16px;color:#222}
+h1{font-size:22px} code,textarea{font:13px/1.4 ui-monospace,Consolas,monospace}
+textarea{width:100%;box-sizing:border-box;padding:8px;border:1px solid #bbb;border-radius:8px;resize:none}
+button{font:inherit;padding:10px 16px;border-radius:8px;border:0;background:#14a37f;color:#fff;cursor:pointer;margin:4px 0}
+.warn{background:#fff4e5;border:1px solid #f0b363;border-radius:8px;padding:10px 12px}
+.box{margin:16px 0}
+</style>
+</head>
+<body>
+<h1>Créer les clés des notifications</h1>
+<p>Cette page fabrique deux clés <b>sur ton ordinateur</b>, sans rien envoyer sur internet. Ouvre-la en double-cliquant sur le fichier (pas besoin de la mettre sur GitHub).</p>
+<button id="go">Générer mes clés</button>
+<div id="out" hidden>
+  <div class="box"><b>1. Clé publique</b> : à coller dans <code>config.js</code> (ligne <code>vapidPublicKey</code>).<br>
+    <textarea id="pub" rows="3" readonly></textarea><button data-c="pub">Copier</button></div>
+  <div class="box"><b>2. Clé privée</b> : à coller UNIQUEMENT dans Supabase (secret <code>VAPID_PRIVATE_KEY</code>).<br>
+    <textarea id="priv" rows="2" readonly></textarea><button data-c="priv">Copier</button></div>
+  <p class="warn">La clé privée ne doit jamais être écrite dans <code>config.js</code>, sur GitHub, ni envoyée dans un message. Une fois collée dans Supabase, ferme cette page. Si tu régénères les clés, il faut réactiver les notifications sur chaque appareil.</p>
+</div>
+<script>
+const b64u=u=>btoa(String.fromCharCode(...u)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+const un=s=>Uint8Array.from(atob(s.replace(/-/g,'+').replace(/_/g,'/')),c=>c.charCodeAt(0));
+document.getElementById('go').onclick=async()=>{
+  const k=await crypto.subtle.generateKey({name:'ECDSA',namedCurve:'P-256'},true,['sign']);
+  const j=await crypto.subtle.exportKey('jwk',k.privateKey);
+  const pub=new Uint8Array(65);pub[0]=4;pub.set(un(j.x),1);pub.set(un(j.y),33);
+  document.getElementById('pub').value=b64u(pub);
+  document.getElementById('priv').value=j.d;
+  document.getElementById('out').hidden=false;
+};
+document.addEventListener('click',e=>{const b=e.target.closest('[data-c]');if(!b)return;
+  const t=document.getElementById(b.dataset.c);t.select();navigator.clipboard.writeText(t.value).then(()=>{b.textContent='Copié ✓'},()=>{document.execCommand('copy')})});
+</script>
+</body>
+</html>
