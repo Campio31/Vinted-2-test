@@ -1,0 +1,44 @@
+import { app } from '../state.js';
+import { $, clean, esc, eur, pad, today } from './core.js';
+import { allBrands } from './form.js';
+import { bulkPut, importText } from './export-import.js';
+import { sheetHead, showSheet } from './tools-index.js';
+import { fold } from './search.js';
+import { ldate } from './proofs.js';
+
+app.openImportTool = openImportTool;
+
+/* --- 8. import Excel, CSV et exports Vinted --- */
+const IMP_T=[['ignore','Ignorer'],['titre','Titre de l\'annonce'],['marque','Marque'],['cat','Catégorie'],['sub','Type'],['taille','Taille'],['genre','Genre'],['grade','Grade'],['etat','État'],['achat','Prix d\'achat'],['pv','Prix de vente'],['dv','Date de vente'],['entree','Date d\'ajout'],['pub','Date de publication'],['statut','Statut'],['canal','Plateforme'],['frais','Frais'],['code','Code'],['coul','Couleur'],['prov','Provenance'],['ballot','Ballot'],['acheteur','Acheteur'],['note','Note']];
+const IMP_S=[['dv',['date de vente','date vente','sold date','sale date','date of sale','date de transaction','transaction date','date de livraison']],['pub',['date de publication','date publication','published']],['achat',['prix d achat','prix achat','achat','cout','cost','purchase price','buy price']],['pv',['prix de vente','prix vente','sold price','sale price','prix final','final price','montant','revenu','revenue','price','prix','total']],['frais',['frais','fees','commission','shipping cost']],['entree',['date d achat','date d ajout','date ajout','date entree','date d entree','added','created','date de creation','date']],['statut',['statut','status','etat de la commande','order status','state']],['canal',['plateforme','platform','canal','channel']],['marque',['marque','brand']],['taille',['taille','size']],['cat',['categorie','category','catalogue']],['sub',['sous categorie','type','subcategory']],['genre',['genre','sexe','gender']],['grade',['grade','qualite']],['etat',['etat','condition']],['code',['code','sku','reference','ref']],['coul',['couleur','color','colour']],['prov',['provenance','source','fournisseur','supplier']],['ballot',['ballot','lot','batch']],['acheteur',['acheteur','buyer','pseudo','username']],['note',['note','notes','commentaire','comment']],['titre',['titre','title','article','nom','name','item','description','produit','objet']]];
+function impGuess(h){const f=fold(h);if(!f)return'ignore';for(const[t,syn]of IMP_S)if(syn.includes(f))return t;for(const[t,syn]of IMP_S)if(syn.some(s=>s.length>=4&&f.includes(s)))return t;return'ignore'}
+function impDate(v){if(v instanceof Date&&!isNaN(v))return ldate(v);if(typeof v==='number'&&v>20000&&v<80000)return ldate(new Date(Math.round((v-25569)*864e5)+12*36e5));const s=String(v||'').trim();if(!s)return'';let m=s.match(/^(\d{4})-(\d{2})-(\d{2})/);if(m)return m[1]+'-'+m[2]+'-'+m[3];m=s.match(/^(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{2,4})/);if(m){const y=m[3].length===2?'20'+m[3]:m[3];return y+'-'+pad(m[2],2)+'-'+pad(m[1],2)}const d=new Date(s);return isNaN(d)?'':ldate(d)}
+function impNum(v){if(typeof v==='number')return v;const s=String(v||'').replace(/[^\d,.\-]/g,'').replace(/\.(?=\d{3}(\D|$))/g,'').replace(',','.');const n=parseFloat(s);return isNaN(n)?undefined:n}
+const IMP_CAT=[['Tshirt',['t shirt','tshirt','tee']],['Sweat',['sweat','hoodie','pull','sweatshirt','capuche']],['Chemise',['chemise']],['Pantalon',['pantalon','jean','jeans','jogging','chino']],['Veste',['veste','blouson','manteau','doudoune','parka','coupe vent']],['Short',['short','bermuda']],['Polo',['polo']],['Maillot',['maillot','jersey']],['RobeJupe',['robe','jupe']]];
+function impFromTitle(t){const f=' '+fold(t)+' ',o={};const br=allBrands().sort((a,b)=>b.length-a.length).find(b=>b.length>=3&&f.includes(' '+fold(b)+' '));if(br)o.marque=br;for(const[c,k]of IMP_CAT)if(k.some(w=>f.includes(' '+w+' '))){o.cat=c;break}const m=String(t).match(/taille\s*:?\s*([A-Za-z0-9]{1,4})\b/i);if(m)o.taille=m[1].toUpperCase();return o}
+function impBuild(rows,map,n0){const out=[];let k=0;const base=Date.now().toString(36);
+ for(const r of rows){const g=t=>{const h=Object.keys(map).find(x=>map[x]===t);return h===undefined?undefined:r[h]},p={};
+  const tx_=g('titre');if(tx_)Object.assign(p,impFromTitle(tx_),{note:String(tx_)});
+  ['marque','cat','sub','taille','genre','grade','etat','canal','code','prov','ballot','acheteur'].forEach(t=>{const v=g(t);if(v!==undefined&&String(v).trim()!=='')p[t]=String(v).trim()});
+  const nt=g('note');if(nt&&String(nt).trim())p.note=[p.note,String(nt).trim()].filter(Boolean).join(' · ');
+  const co=g('coul');if(co&&String(co).trim())p.coul=String(co).split(/[,\/]/).map(s=>s.trim()).filter(Boolean);
+  ['achat','pv','frais'].forEach(t=>{const v=impNum(g(t));if(v!==undefined)p[t]=v});
+  ['dv','entree','pub'].forEach(t=>{const v=impDate(g(t));if(v)p[t]=v});
+  const stv=fold(g('statut')||'');p.statut=/vendu|sold|livr|termin|complet|paye|pay/.test(stv)?'Vendu':/indispo|retire|masque|hidden|archiv|supprim/.test(stv)?'Pas Disponible':(stv?'Disponible':(p.pv>0&&p.dv?'Vendu':'Disponible'));
+  if(p.statut==='Vendu'&&!(p.pv>=0))p.statut='Pas Disponible';if(!p.entree)p.entree=today();if(!p.marque&&!p.cat&&!p.note)continue;if(!p.cat)p.cat='Autres';
+  p.id='i'+base+(k++).toString(36);const q=clean(p);out.push(q)}return out}
+async function impRead(file){const buf=await file.arrayBuffer(),name=file.name.toLowerCase();let wb;
+ if(/\.(csv|txt|tsv)$/.test(name)){let txt=new TextDecoder('utf-8').decode(buf);if(txt.includes('�'))txt=new TextDecoder('windows-1252').decode(buf);wb=XLSX.read(txt,{type:'string',raw:true})}else wb=XLSX.read(buf,{type:'array',cellDates:true});
+ const ws=wb.Sheets[wb.SheetNames[0]];return XLSX.utils.sheet_to_json(ws,{defval:'',raw:true})}
+function openImportTool(){showSheet(sheetHead(t('Importer des pièces'))+`<div class="card"><p class="sub">${t('Importe un fichier Excel ou CSV d\'une autre appli, ou l\'export de tes données Vinted. Tu vérifies la correspondance des colonnes avant d\'importer.')}</p><label class="btn mint" style="cursor:pointer">${t('Choisir un fichier')}<input type="file" id="io_f" accept=".csv,.tsv,.txt,.xlsx,.xls,.xlsm,.json" hidden></label><div class="hint">${t('Pour Vinted : demande tes données dans Paramètres, Confidentialité, Télécharger mes données. Tu reçois un fichier ZIP : dézippe-le et choisis le fichier CSV qui liste tes articles ou tes ventes. Je n\'ai pas pu vérifier le format exact de ces exports, la correspondance des colonnes reste modifiable.')}</div><div class="hint" id="io_s"></div></div><div id="io_r"></div>`);
+ $('shc').onchange=async e=>{if(e.target.id!=='io_f')return;const f=e.target.files[0];e.target.value='';if(!f)return;const s=$('io_s');
+  if(/\.json$/i.test(f.name)){await importText(await f.text());s.textContent=window.t('Fichier JSON importé.');return}
+  s.textContent=window.t('Lecture du fichier…');let rows;try{rows=await impRead(f)}catch(er){s.textContent=window.t('Fichier illisible : {e}',{e:er&&er.message||window.t('erreur')});return}
+  if(!rows.length){s.textContent=window.t('Aucune ligne trouvée dans ce fichier.');return}s.textContent=tn(rows.length,'ligne trouvée','lignes trouvées')+'.';
+  const heads=Object.keys(rows[0]),map={},used=new Set();heads.forEach(h=>{const t=impGuess(h);if(t!=='ignore'&&!used.has(t)){map[h]=t;used.add(t)}else map[h]='ignore'});
+  const draw=()=>{const pv=impBuild(rows.slice(0,3),map);$('io_r').innerHTML=`<div class="card"><h3>${window.t('Colonnes')}</h3>${heads.map((h,i)=>`<div class="iom"><span title="${esc(h)}">${esc(h||window.t('(sans titre)'))}<small>${esc(String(rows[0][h]).slice(0,28))}</small></span><select data-h="${i}">${IMP_T.map(([k,l])=>`<option value="${k}"${map[h]===k?' selected':''}>${window.t(l)}</option>`).join('')}</select></div>`).join('')}
+   <div class="hint">${pv.length?window.t('Aperçu de la première ligne : {l}',{l:esc([pv[0].marque,tv(pv[0].cat),pv[0].taille,pv[0].statut,pv[0].pv!==undefined?eur(pv[0].pv):''].filter(Boolean).join(' · '))}):window.t('Associe au moins une colonne (titre, marque ou catégorie).')}</div>
+   <div class="acts"><button type="button" class="btn mint" id="io_go"${pv.length?'':' disabled'}>${window.t(rows.length>1?'Importer {n} lignes':'Importer {n} ligne',{n:rows.length})}</button></div></div>`;
+   $('io_r').querySelectorAll('select').forEach(sel=>sel.onchange=()=>{map[heads[+sel.dataset.h]]=sel.value;draw()});
+   $('io_go').onclick=async()=>{$('io_go').disabled=true;const l=impBuild(rows,map);if(!l.length){$('io_s').textContent=window.t('Aucune ligne exploitable.');return}try{await bulkPut(l,$('io_s'),{})}catch(er){$('io_s').textContent=window.t('Import interrompu : {e}',{e:er&&er.message||window.t('erreur')});return}
+    $('io_s').textContent=tn(l.length,'pièce importée','pièces importées')+(rows.length-l.length?' · '+tn(rows.length-l.length,'ignorée','ignorées'):'')+'.';app.toast(tn(l.length,'pièce importée','pièces importées'));$('io_r').innerHTML=''}};draw()}}
