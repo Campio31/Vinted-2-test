@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Max</title>
+<meta name="description" content="Suivi du stock et des ventes de vêtements de seconde main (Vinted, TikTok Live).">
+<meta name="theme-color" content="#F1F2F4">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Max">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<script>try{document.documentElement.dataset.theme=JSON.parse(localStorage.getItem('theme')||'"light"')}catch(e){}</script>
+<script src="vendor/xlsx.full.min.js"></script>
+<script src="vendor/supabase.js"></script>
+<script src="vendor/qrcode.js"></script>
+<script src="vendor/jsQR.js"></script>
+<script src="config.js"></script>
+<script src="env.js"></script>
+<script src="i18n.js"></script>
+<script src="vintage.js"></script>
+
+</head>
+<body>
+<div id="app">
+ <header><h1 id="ttl">Ajouter</h1><div class="hr"><button type="button" class="ib" id="mic" aria-label="Commande vocale"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button><button type="button" class="ib" id="rptb" aria-label="Rapport PDF du mois" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l4 4v14H6zM14 3v5h5M9 13h7M9 17h5"/></svg></button><button type="button" class="ib" id="tl" aria-label="Réglages"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button><button type="button" class="ib" id="offdot" hidden aria-label="Hors ligne"><i></i></button><div id="sync" hidden><i></i><span>Chargement…</span></div></div></header>
+ <div id="ro" class="warn" hidden>Le stockage du navigateur est indisponible (navigation privée ?). Les données seront perdues à la fermeture : exporte une sauvegarde JSON.</div>
+ <main>
+  <section id="v-add" class="view on"><div class="card frm" id="fadd"></div></section>
+  <section id="v-sales" class="view"></section>
+  <section id="v-tools" class="view"><div id="tv"></div></section>
+  <section id="v-quick" class="view">
+   <div class="chips" style="margin-bottom:10px"><button type="button" class="chip sm" id="lv_back">‹ Ventes</button></div>
+   <div id="gq"></div>
+   <div id="vl">
+    <div id="lh"></div>
+    <div class="srch" style="margin-top:12px"><input type="search" id="ls" placeholder="N° ou code de la pièce" autocomplete="off" autocapitalize="none" spellcheck="false" class="big-in"></div>
+    <div id="lc"></div>
+    <div id="lcur"></div>
+   </div>
+  </section>
+  <section id="v-list" class="view">
+   <div class="srch"><input type="search" id="q" placeholder="Rechercher (marque, type, code, taille…)" autocomplete="off"></div>
+   <div class="chips" id="flt" style="margin-bottom:12px"></div>
+   <div id="lst"></div>
+  </section>
+  <section id="v-dash" class="view">
+   <div class="chips" id="per" style="margin-bottom:12px"></div>
+   <div id="dsh"></div>
+  </section>
+  <section id="v-set" class="view">
+   <h2 class="shd">Compte</h2>
+   <div class="card" id="sy"></div>
+   <div class="card" id="acc"></div>
+   <h2 class="shd">Préférences</h2>
+   <div class="card" id="lgc"></div>
+   <div class="card" id="thc"></div>
+   <div class="card" id="cfgc"></div>
+   <div class="card" id="cptc"></div>
+   <div class="card" id="rlc"></div>
+   <div class="card" id="cfc"></div>
+   <h2 class="shd">Mes données</h2>
+   <div class="card" id="bkc"></div>
+   <div class="card" id="trc">
+    <h3>Corbeille</h3>
+    <p class="sub">Récupère une pièce supprimée par erreur (30 jours)</p>
+    <div class="acts"><button class="btn sec" data-tool="trash" type="button">Ouvrir la corbeille</button></div>
+   </div>
+   <div class="card" id="inst" hidden>
+    <h3>Installer l'application</h3>
+    <p class="sub" id="insth">Ajoute l'appli à ton écran d'accueil ou à ton bureau pour l'ouvrir comme une application, même sans connexion.</p>
+    <div class="acts"><button class="btn" id="instb" type="button">Installer</button></div>
+   </div>
+   <div class="card xic" id="xic">
+    <h3>Exporter et importer</h3>
+    <p class="sub">Emporte tes données ou reprends-les depuis un fichier.</p>
+    <div class="xblk">
+     <div class="xh"><span class="tic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg></span><div><b>Exporter</b><small>Un classeur Excel (Stock, Ventes, Résumé) ou une sauvegarde complète avec les photos.</small></div></div>
+     <div class="acts two"><button class="btn" id="xx" type="button">Télécharger l'Excel</button><button class="btn sec" id="xj" type="button">Sauvegarde complète (JSON)</button></div>
+     <div class="hint" id="xs"></div>
+    </div>
+    <div class="xblk">
+     <div class="xh"><span class="tic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21V9M7 14l5-5 5 5M5 3h14"/></svg></span><div><b>Importer</b><small>Une sauvegarde JSON faite ici ou dans ton ancienne appli, ou un fichier Excel ou CSV. Les pièces de même identifiant sont remplacées, les autres sont ajoutées.</small></div></div>
+     <div class="acts two"><label class="btn" for="imp">Choisir une sauvegarde</label><button class="btn sec" id="impo" type="button">Excel ou CSV…</button></div>
+     <input type="file" id="imp" accept=".json,application/json" hidden>
+     <details class="xdet"><summary>Coller du JSON à la place</summary>
+      <textarea id="impt" aria-label="JSON" placeholder='{"pieces":[{"id":"i0001","cat":"Short","marque":"Nike","achat":4.5,"statut":"Disponible"}]}' style="font-family:ui-monospace,Consolas,monospace;font-size:13px"></textarea>
+      <div class="acts two"><button class="btn" id="impb" type="button">Importer le texte</button><button class="btn sec" id="impm" type="button">Télécharger un modèle</button></div>
+     </details>
+     <div class="hint" id="is"></div>
+    </div>
+   </div>   <h2 class="shd">Aide et informations</h2>
+   <div class="card" id="hlp"></div>
+   <div class="card" id="abo"></div>
+  </section>
+ </main>
+ <nav id="nav">
+  <div class="brand"><svg class="lg" viewBox="0 0 104 104" aria-hidden="true"><rect width="104" height="104" fill="#111111"/><rect x="12" y="68" width="80" height="18" rx="3" fill="#F1F2F4"/><rect x="18" y="46" width="68" height="18" rx="3" fill="#C9CBD0"/><rect x="32" y="14" width="58" height="18" rx="3" fill="#FF4A1C" transform="rotate(-12 62 24)"/><path d="M20 28H32M16 20H26" stroke="#FF4A1C" stroke-width="3" stroke-linecap="round" fill="none"/></svg><span>max</span></div>
+  <button data-v="list" type="button" aria-label="Stock"><svg viewBox="0 0 24 24"><path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/></svg><span class="nl">Stock</span></button>
+  <button data-v="sales" type="button" aria-label="Vente"><svg viewBox="0 0 24 24"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6"/></svg><span class="nl">Vente</span></button>
+  <button data-v="add" class="on addb" type="button" aria-label="Ajouter une pièce"><span class="fab"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span><span class="nl">Ajouter</span></button>
+  <button data-v="dash" type="button" aria-label="Bilan"><svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg><span class="nl">Bilan</span></button>
+  <button data-v="tools" type="button" aria-label="Outils"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.5"/></svg><span class="nl">Outils</span><span class="nbg" id="nbg" hidden></span></button>
+ </nav>
+</div>
+<div id="auth" hidden><div class="card">
+ <div class="authlogo"><svg class="lg" viewBox="0 0 104 104" aria-hidden="true"><rect width="104" height="104" fill="#111111"/><rect x="12" y="68" width="80" height="18" rx="3" fill="#F1F2F4"/><rect x="18" y="46" width="68" height="18" rx="3" fill="#C9CBD0"/><rect x="32" y="14" width="58" height="18" rx="3" fill="#FF4A1C" transform="rotate(-12 62 24)"/><path d="M20 28H32M16 20H26" stroke="#FF4A1C" stroke-width="3" stroke-linecap="round" fill="none"/></svg><b>max</b></div>
+ <p class="sub">Connecte-toi pour retrouver ton stock sur tous tes appareils.</p>
+ <div class="fld"><label class="l" for="au_mail">E-mail</label><input type="email" id="au_mail" inputmode="email" autocomplete="username email" autocapitalize="none" spellcheck="false"></div>
+ <div class="fld"><label class="l" for="au_pw">Mot de passe</label><div class="pwrow"><input type="password" id="au_pw" autocomplete="current-password"><button type="button" class="btn sec sm" id="au_eye" aria-label="Afficher le mot de passe">Afficher</button></div></div>
+ <label class="chk"><input type="checkbox" id="au_rm" checked><span>Se souvenir de moi sur cet appareil</span></label>
+ <div class="acts"><button class="btn" id="au_in" type="button">Se connecter</button><button class="btn sec" id="au_up" type="button">Créer mon compte</button></div>
+ <button type="button" class="lnk" id="au_fg" style="margin-top:10px">Mot de passe oublié ?</button>
+ <div id="au_msg" role="status"></div>
+ <p class="sub" style="margin:12px 0 0;font-size:12px">En créant un compte, tu acceptes les <a href="conditions.html" target="_blank" rel="noopener">conditions d'utilisation</a> et la <a href="confidentialite.html" target="_blank" rel="noopener">politique de confidentialité</a>.</p>
+ <p class="sub" style="margin:12px 0 0;font-size:12px">Max compte anonymement les écrans et outils utilisés pour s'améliorer (jamais ton stock ni tes ventes). Tu peux le refuser dans Outils &gt; Confort.</p>
+</div>
+<div class="card" id="au_reset" hidden>
+ <h2 style="margin:0 0 4px;font-size:22px">Nouveau mot de passe</h2>
+ <p class="sub">Choisis un nouveau mot de passe (6 caractères minimum).</p>
+ <div class="fld"><label class="l" for="au_np">Nouveau mot de passe</label><input type="password" id="au_np" autocomplete="new-password"></div>
+ <div class="acts"><button class="btn" id="au_save" type="button">Enregistrer</button></div>
+ <div id="au_msg2" role="status" style="margin-top:12px;min-height:20px"></div>
+</div></div>
+<div id="sheet" hidden><div id="shc"></div></div>
+<div id="upd" role="status" hidden><span>Nouvelle version disponible</span><button type="button" id="upd_go">Mettre à jour</button><button type="button" id="upd_x" aria-label="Plus tard">×</button></div>
+<div id="bk" role="status" hidden><span>Sauvegarde de la semaine prête</span><button type="button" id="bk_go">Télécharger</button><button type="button" id="bk_x" aria-label="Plus tard">×</button></div>
+<div id="cb" role="status" hidden><span>Ton coach du lundi est prêt</span><button type="button" id="cb_go">Ouvrir</button><button type="button" id="cb_x" aria-label="Plus tard">×</button></div>
+<div id="scan" hidden><video id="scan_v" playsinline muted></video><div class="sfr" aria-hidden="true"></div><div id="scan_s" class="sst">Place le QR dans le cadre</div><button type="button" class="btn sec" id="scan_x">Fermer</button></div>
+<div id="toast" hidden></div>
+
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>
