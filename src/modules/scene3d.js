@@ -1,3 +1,4 @@
+import { furnModel, propsFor, buildingModel, charModel, createLibrary } from './models3d.js';
 import { TYPES, advance, buildNav, canPlace, dims, findPath, isFloor, moveItem, nearestFree, rectOf, roleFor, diffMoves, rotateItem, standPoint, typeLabel } from './plan3d.js';
 
 /* ---------- Scène 3D (Three.js) : lieu, meubles, colis avec photo, personnages, éditeur ---------- */
@@ -40,7 +41,10 @@ export function createScene(T, OC, host, cb) {
   const ray = new T.Raycaster(), ndc = new T.Vector2(), gplane = new T.Plane(new T.Vector3(0, 1, 0), 0), hit = new T.Vector3(), tmp = new T.Object3D();
   const matCache = new Map(), std = (c, r = 0.85, mt = 0) => { const k = c + '|' + r + '|' + mt; let m = matCache.get(k); if (!m) { m = new T.MeshStandardMaterial({ color: c, roughness: r, metalness: mt }); matCache.set(k, m); } return m; };
   const rgeo = (w, h, d, rad) => (RB && rad ? new RB(w, h, d, 2, Math.min(rad, w / 2.2, h / 2.2, d / 2.2)) : new T.BoxGeometry(w, h, d));
-  const freeGeo = g => g.traverse(o => { if (o.geometry) o.geometry.dispose(); if (o.material && o.material.userData && o.material.userData.own) { if (o.material.map) o.material.map.dispose(); o.material.dispose(); } });
+  /* modèles importés : chargés une fois puis copiés ; leurs géométries sont partagées, on ne les libère jamais */
+  const lib = cb.extra && cb.extra.GL && cb.extra.SU ? createLibrary(T, cb.extra.GL, cb.extra.SU) : null;
+  const tint = (obj, hexc) => obj.traverse(o => { if (o.isMesh && o.material) { o.material = Array.isArray(o.material) ? o.material.map(m => m.clone()) : o.material.clone(); (Array.isArray(o.material) ? o.material : [o.material]).forEach(m => { m.color.set(hexc); }); } });
+  const freeGeo = g => g.traverse(o => { if (o.geometry && !o.userData.shared) o.geometry.dispose(); if (o.material && o.material.userData && o.material.userData.own) { if (o.material.map) o.material.map.dispose(); o.material.dispose(); } });
 
   /* ----- état ----- */
   let mode = 'wh', data = null, town = null, framed = '', run = true, editing = false, selected = '', spans = 40, nav = null, navBig = null;
@@ -117,7 +121,20 @@ export function createScene(T, OC, host, cb) {
       [-0.35, 0, 0.35].forEach(z => bx(g, w, 0.07, 0.18, WOOD, 0, 0.12, z)); [-0.5, 0, 0.5].forEach(x => bx(g, 0.12, 0.08, d, 0xb8935a, x * (w / 1.3), 0.04, 0)); bx(g, w, 0.04, d, WOOD, 0, 0.17, 0);
     }
     g.position.set(it.x, 0, it.z); g.rotation.y = (it.rot || 0) * Math.PI / 2;
-    g.traverse(o => { o.userData.itemId = it.id; }); return g;
+    g.traverse(o => { o.userData.itemId = it.id; });
+    /* modèle importé à la place des formes simples (le temps du chargement, les formes simples restent) */
+    const fm = lib && furnModel(it, { w, d, h });
+    if (fm) lib.get(fm.f, { w, d, h: fm.fit === 'uniform' ? h : 0 }, fm.fit).then(({ obj }) => {
+      if (g.parent !== shellG || !shellG) return;
+      [...g.children].forEach(c => { g.remove(c); freeGeo(c); }); g.add(obj); obj.traverse(o => { o.userData.itemId = it.id; });
+    }).catch(() => {});
+    return g;
+  };
+  const addProps = tpl => {
+    if (!lib) return; const g0 = shellG;
+    propsFor(tpl).forEach(p => lib.get(p.f, { w: p.w, d: p.d, h: p.h }, p.fit).then(({ obj }) => {
+      if (shellG !== g0) return; obj.position.set(p.x, p.flat ? 0.12 : 0.1, p.z); obj.traverse(o => { if (p.flat) o.receiveShadow = true; }); g0.add(obj);
+    }).catch(() => {}));
   };
 
   /* ----- les lieux : sol, murs, extérieur ----- */
@@ -151,7 +168,7 @@ export function createScene(T, OC, host, cb) {
       const carC = [0xd23a3a, 0x3b82c4, 0xf5f6f7, 0x2f3a45, 0xe8a33d, 0x4aa56a]; bx(shellG, w + 12, 0.05, 6, 0x9aa1a8, cx, -0.04, b.maxZ + 6, false);
       carC.forEach((c, i) => { const g = new T.Group(), body = new T.Mesh(new T.BoxGeometry(2, 0.7, 4), std(c)), top = new T.Mesh(new T.BoxGeometry(1.7, 0.6, 2), std(0x9fb4c4)); body.position.y = 0.55; top.position.set(0, 1.15, -0.2); body.castShadow = true; g.add(body, top); g.position.set(b.minX + 4 + i * 3.4, 0, b.maxZ + 6); shellG.add(g); });
     }
-    decor(tpl, b);
+    decor(tpl, b); addProps(tpl);
     trees(shellG, b, tpl.shell === 'wh' ? 14 : 5, tpl.shell === 'wh' ? 34 : 18, 7);
     data.plan.items.forEach(it => { const g = furniture(it); shellG.add(g); itemGroups.set(it.id, g); });
     nav = buildNav(data.plan, tpl); navBig = buildNav(data.plan, tpl, { margin: 0.6 });
@@ -191,15 +208,29 @@ export function createScene(T, OC, host, cb) {
   };
 
   /* ----- les personnages ----- */
-  const person = role => {
-    const g = new T.Group(), col = { prep: 0x3b82c4, quai: 0xff7a1a, cariste: 0x4aa56a }[role] || 0x3b82c4, mesh = (w, h, d, c) => { const m = new T.Mesh(new T.BoxGeometry(w, h, d), std(c)); m.castShadow = true; return m; };
-    const body = mesh(0.38, 0.55, 0.22, col); body.position.y = 1.05; g.add(body);
-    const stripe = mesh(0.4, 0.07, 0.24, role === 'quai' ? 0xe8f3a8 : 0xdfe6ee); stripe.position.y = 1.05; g.add(stripe);
-    const head = new T.Mesh(new T.SphereGeometry(0.15, 12, 10), std(0xf0c9a8)); head.position.y = 1.5; head.castShadow = true; g.add(head);
-    const hat = new T.Mesh(new T.SphereGeometry(0.16, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2), std(role === 'quai' ? 0xf2c230 : 0x2f3a45)); hat.position.y = 1.54; g.add(hat);
-    const limb = (x, y, w, h, c) => { const p = new T.Group(); p.position.set(x, y, 0); const m = mesh(w, h, w, c); m.position.y = -h / 2; p.add(m); g.add(p); return p; };
+  const person = (role, idx) => {
+    const g = new T.Group(), fb = new T.Group(), col = { prep: 0x3b82c4, quai: 0xff7a1a, cariste: 0x4aa56a }[role] || 0x3b82c4, mesh = (w, h, d, c) => { const m = new T.Mesh(new T.BoxGeometry(w, h, d), std(c)); m.castShadow = true; return m; };
+    g.add(fb);
+    const body = mesh(0.38, 0.55, 0.22, col); body.position.y = 1.05; fb.add(body);
+    const stripe = mesh(0.4, 0.07, 0.24, role === 'quai' ? 0xe8f3a8 : 0xdfe6ee); stripe.position.y = 1.05; fb.add(stripe);
+    const head = new T.Mesh(new T.SphereGeometry(0.15, 12, 10), std(0xf0c9a8)); head.position.y = 1.5; head.castShadow = true; fb.add(head);
+    const hat = new T.Mesh(new T.SphereGeometry(0.16, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2), std(role === 'quai' ? 0xf2c230 : 0x2f3a45)); hat.position.y = 1.54; fb.add(hat);
+    const limb = (x, y, w, h, c) => { const p = new T.Group(); p.position.set(x, y, 0); const m = mesh(w, h, w, c); m.position.y = -h / 2; p.add(m); fb.add(p); return p; };
     const blob = new T.Mesh(new T.CircleGeometry(0.4, 16), new T.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.22, depthWrite: false })); blob.rotation.x = -Math.PI / 2; blob.position.y = 0.02; g.add(blob);
-    return { g, legL: limb(-0.1, 0.78, 0.14, 0.62, 0x2f3a45), legR: limb(0.1, 0.78, 0.14, 0.62, 0x2f3a45), armL: limb(-0.25, 1.3, 0.1, 0.5, col), armR: limb(0.25, 1.3, 0.1, 0.5, col) };
+    const P = { g, fb, mix: null, clips: null, cur: '', legL: limb(-0.1, 0.78, 0.14, 0.62, 0x2f3a45), legR: limb(0.1, 0.78, 0.14, 0.62, 0x2f3a45), armL: limb(-0.25, 1.3, 0.1, 0.5, col), armR: limb(0.25, 1.3, 0.1, 0.5, col) };
+    /* vrai personnage animé (marche, repos, ramassage) à la place du pantin, dès qu'il est chargé */
+    if (lib) lib.get(charModel(role, idx), { h: 1.7 }, 'uniform').then(({ obj, anims }) => {
+      if (!agents.includes(P)) return;
+      const clips = {}; const mix = new T.AnimationMixer(obj); anims.forEach(c => { clips[c.name] = mix.clipAction(c); });
+      if (!clips.walk || !clips.idle) return;
+      g.remove(fb); g.add(obj); P.mix = mix; P.clips = clips; clips.idle.play(); P.cur = 'idle';
+    }).catch(() => {});
+    return P;
+  };
+  /* enchaîne en douceur vers une animation du personnage (idle, walk, pick-up) */
+  const playClip = (a, name, once) => {
+    if (!a.mix || !a.clips || a.cur === name || !a.clips[name]) return;
+    const nx = a.clips[name], pv = a.clips[a.cur]; nx.reset(); nx.setLoop(once ? T.LoopOnce : T.LoopRepeat, once ? 1 : Infinity); nx.clampWhenFinished = !!once; nx.play(); if (pv) pv.crossFadeTo(nx, 0.2, false); a.cur = name;
   };
   const forklift = () => {
     const g = new T.Group(), part = (w, h, d, c, px, py, pz) => { const m = new T.Mesh(new T.BoxGeometry(w, h, d), std(c)); m.position.set(px, py, pz); m.castShadow = true; g.add(m); };
@@ -211,7 +242,7 @@ export function createScene(T, OC, host, cb) {
     agents.forEach(a => scene.remove(a.g)); agents.length = 0;
     const tpl = data.tpl, b = tpl.bounds;
     tpl.roles.forEach((role, i) => {
-      const big = role === 'cariste', m = big ? forklift() : person(role), n = big ? navBig : nav, p = nearestFree(n, b.minX + (b.maxX - b.minX) * (0.2 + 0.15 * i), b.minZ + (b.maxZ - b.minZ) * 0.5, 30) || { x: (b.minX + b.maxX) / 2, z: (b.minZ + b.maxZ) / 2 };
+      const big = role === 'cariste', m = big ? forklift() : person(role, i), n = big ? navBig : nav, p = nearestFree(n, b.minX + (b.maxX - b.minX) * (0.2 + 0.15 * i), b.minZ + (b.maxZ - b.minZ) * 0.5, 30) || { x: (b.minX + b.maxX) / 2, z: (b.minZ + b.maxZ) / 2 };
       scene.add(m.g); m.g.position.set(p.x, 0.1, p.z);
       agents.push(Object.assign(m, { role, big, w: { x: p.x, z: p.z, rot: 0, speed: big ? 2.3 : 1.5, path: [] }, state: 'idle', idleT: 0.5 + i * 0.7, task: null, carry: null, phase: 0, wait: 0, stuck: 0, id: i }));
     });
@@ -242,13 +273,15 @@ export function createScene(T, OC, host, cb) {
     if (a.task && a.state !== 'idle') { a.task.t = (a.task.t || 0) + dt; if (a.task.t > 90) { const t = a.task; finish(t, a); } }
     /* corps : position, orientation douce, balancement des jambes et des bras */
     a.g.position.set(a.w.x, 0.1, a.w.z); let da = a.w.rot - a.g.rotation.y; da = Math.atan2(Math.sin(da), Math.cos(da)); a.g.rotation.y += da * Math.min(1, dt * 9);
-    if (!big) { const mv = a.w.path.length > 0 && a.wait <= 0; a.phase += mv ? dt * 8 : 0; const sw = mv ? Math.sin(a.phase) * 0.7 : 0; a.legL.rotation.x = sw; a.legR.rotation.x = -sw; a.armL.rotation.x = a.carry ? -1.25 : -sw * 0.8; a.armR.rotation.x = a.carry ? -1.25 : sw * 0.8; }
+    if (!big && a.mix) { const mv = a.w.path.length > 0 && a.wait <= 0; if (mv) playClip(a, 'walk'); else if (!(a.cur === 'pick-up' && a.wait > 0)) playClip(a, 'idle'); a.mix.update(dt); }
+    else if (!big) { const mv = a.w.path.length > 0 && a.wait <= 0; a.phase += mv ? dt * 8 : 0; const sw = mv ? Math.sin(a.phase) * 0.7 : 0; a.legL.rotation.x = sw; a.legR.rotation.x = -sw; a.armL.rotation.x = a.carry ? -1.25 : -sw * 0.8; a.armR.rotation.x = a.carry ? -1.25 : sw * 0.8; }
   };
   const onArrive = a => {
     if (a.state === 'go_pick' && a.task) {
       const t = a.task, tr = transit.get(t.id); if (tr) tr.state = 'carried';
       const info = { id: t.id, sc: 1, hang: false, dim: false, stage: t.to.stage, rot: 0 }, m = makePiece(Object.assign({}, t.to, info), { x: 0, y: 0, z: 0, rot: 0 }); m.scale.setScalar(0.9);
       m.position.set(0, a.big ? 0.4 : 1.0, a.big ? 1.5 : 0.42); a.g.add(m); a.carry = m; rebuildPieces();
+      if (a.mix) { a.wait = 0.6; playClip(a, 'pick-up', true); }
       const n = a.big ? navBig : nav, ps = standFor(n, t.to.where, t.to), path = ps && findPath(n, a.w, ps);
       if (!path) return finish(t, a);
       a.state = 'go_drop'; a.w.path = path; a.stuck = 0;
@@ -264,8 +297,13 @@ export function createScene(T, OC, host, cb) {
     town.buildings.forEach(bl => {
       bx(shellG, town.cell - 1.4, 0.16, town.cell - 1.4, 0xdfe3e6, bl.x, 0.08, bl.z, false);
       const body = new T.Mesh(new T.BoxGeometry(bl.w, bl.h, bl.w), new T.MeshStandardMaterial({ color: bl.dim ? 0xdcdfe2 : bl.color, roughness: 0.8 })); body.position.set(bl.x, bl.h / 2 + 0.16, bl.z); body.castShadow = true; body.receiveShadow = true; body.userData = { buyerKey: bl.k }; shellG.add(body); townMeshes.push(body);
-      bx(shellG, bl.w + 0.3, 0.22, bl.w + 0.3, bl.dim ? 0xc9cdd1 : 0x3a4552, bl.x, bl.h + 0.27, bl.z);
-      for (let f = 1; f < Math.min(bl.n, 12) + 1; f++) { const y = 1.4 + f * 1.15; [-1, 1].forEach(s => bx(shellG, bl.w * 0.7, 0.35, 0.05, 0xbfe0f5, bl.x, y, bl.z + s * (bl.w / 2 + 0.03), false)); }
+      const parts = [bx(shellG, bl.w + 0.3, 0.22, bl.w + 0.3, bl.dim ? 0xc9cdd1 : 0x3a4552, bl.x, bl.h + 0.27, bl.z)];
+      for (let f = 1; f < Math.min(bl.n, 12) + 1; f++) { const y = 1.4 + f * 1.15; [-1, 1].forEach(s => parts.push(bx(shellG, bl.w * 0.7, 0.35, 0.05, 0xbfe0f5, bl.x, y, bl.z + s * (bl.w / 2 + 0.03), false))); }
+      /* vrai immeuble importé : il remplace le bloc simple, qui reste invisible pour recevoir les touchers */
+      if (lib && quality === 'high') { const g0 = shellG; lib.get(buildingModel(bl), { w: bl.w, d: bl.w, h: bl.h }, 'free').then(({ obj }) => {
+        if (shellG !== g0) return; obj.position.set(bl.x, 0.16, bl.z); if (bl.dim) tint(obj, 0xc9cdd1); g0.add(obj);
+        parts.forEach(p => { p.visible = false; }); body.material.transparent = true; body.material.opacity = 0; body.material.depthWrite = false; body.castShadow = false;
+      }).catch(() => {}); }
       if (bl.tag === 'fidele') bx(shellG, 0.1, 1.2, 0.1, 0x333333, bl.x, bl.h + 0.9, bl.z, false);
       label(shellG, '@' + bl.nom, bl.n + (bl.n > 1 ? ' achats' : ' achat'), bl.x, bl.h + 2.6, bl.z, 4.2);
     });

@@ -117,7 +117,7 @@ export async function whMount(slot) {
   if (S.failed) return fail(t('La 3D n\'est pas disponible sur cet appareil.'));
   slot.innerHTML = `<div class="hint" style="padding:16px">${t('Chargement de la 3D…')}</div>`;
   if (S.loading) return; S.loading = true;
-  let T, OC, X = {}; try { let RB, RE; [T, { OrbitControls: OC }, { RoundedBoxGeometry: RB }, { RoomEnvironment: RE }] = await Promise.all([import('three'), import('three/examples/jsm/controls/OrbitControls.js'), import('three/examples/jsm/geometries/RoundedBoxGeometry.js'), import('three/examples/jsm/environments/RoomEnvironment.js')]); X = { RB, RE }; } catch (e) { return fail(t('La 3D n\'a pas pu se charger : vérifie ta connexion puis réessaie.')); }
+  let T, OC, X = {}; try { let RB, RE; [T, { OrbitControls: OC }, { RoundedBoxGeometry: RB }, { RoomEnvironment: RE }] = await Promise.all([import('three'), import('three/examples/jsm/controls/OrbitControls.js'), import('three/examples/jsm/geometries/RoundedBoxGeometry.js'), import('three/examples/jsm/environments/RoomEnvironment.js')]); X = { RB, RE }; try { const [{ GLTFLoader: GL }, SU] = await Promise.all([import('three/examples/jsm/loaders/GLTFLoader.js'), import('three/examples/jsm/utils/SkeletonUtils.js')]); X.GL = GL; X.SU = SU; } catch (e) { /* sans modèles importés : formes simples */ } } catch (e) { return fail(t('La 3D n\'a pas pu se charger : vérifie ta connexion puis réessaie.')); }
   const { createScene } = await import('./scene3d.js');
   S.host = document.createElement('div'); S.host.style.cssText = 'width:100%;height:100%';
   const cur = $('wh_slot'); if (!cur) { S.loading = false; return; } cur.innerHTML = ''; cur.appendChild(S.host);
