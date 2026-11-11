@@ -551,3 +551,16 @@ button.bkt{cursor:pointer}
 @media(min-width:900px){#tour .tcard{left:calc(224px + 24px + 24px);right:auto;margin:0;width:420px}}
 .tuto-n{font-weight:800;font-size:18px}.tuto-n.ok{color:var(--mint)}
 .tuto-l{margin:0;padding-left:22px}.tuto-l li{margin:0 0 10px}.tuto-l b{display:block}.tuto-l span{display:block;font-size:14px;color:var(--mute)}
+/* ===== v52 ===== */
+/* Ajouter sur ordinateur : l'écran utilise toute la largeur, plus de vide à droite */
+@media(min-width:900px){
+ body[data-view="add"] #app{max-width:none;margin:0}
+ body[data-view="add"] #v-add.on{grid-template-columns:minmax(520px,1.1fr) minmax(380px,1fr);gap:24px}
+ body[data-view="add"] #fprev{max-height:calc(100vh - 32px)}
+ #fprev .fpbody{display:grid;grid-template-columns:minmax(0,260px) minmax(0,1fr);gap:18px;align-items:start}
+ #fprev .fpbody .fpi{height:260px;margin:0}
+}
+/* Retoucher la photo */
+.pst{display:grid;place-items:center;background:var(--soft);border-radius:12px;padding:8px;margin-bottom:8px}
+.pst canvas{max-width:100%;height:auto;border-radius:6px}
+#ps_t{width:100%}
