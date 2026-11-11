@@ -9,9 +9,11 @@
 window.stockEnvInit = function (w) {
   var C = w.STOCK_CONFIG = w.STOCK_CONFIG || {};
   var test = /-test(\/|$)/i.test(w.location.pathname) || C.env === 'test';
-  w.STOCK_ENV = test ? 'test' : 'prod';
-  if (!test) return w.STOCK_ENV;
-  var P = 'T_';
+  /* ?demo=1 : la page de présentation montre l'appli dans un cadre, avec des pièces d'exemple et des données à part (jamais celles de l'utilisateur) */
+  var demo = !test && /[?&]demo=1(&|$)/.test(w.location.search);
+  w.STOCK_ENV = test ? 'test' : demo ? 'demo' : 'prod';
+  if (!test && !demo) return w.STOCK_ENV;
+  var P = test ? 'T_' : 'D_';
   try {
     var S = w.Storage && w.Storage.prototype;
     if (S) {
@@ -34,7 +36,7 @@ window.stockEnvInit = function (w) {
       F.deleteDatabase = function (n) { return d.call(this, P + n); };
     }
   } catch (e) { /* stockage indisponible : le mode test continue sans isolation, la page le dira */ }
-  if (C.test && typeof C.test === 'object') { for (var k2 in C.test) C[k2] = C.test[k2]; }
+  if (test && C.test && typeof C.test === 'object') { for (var k2 in C.test) C[k2] = C.test[k2]; }
   else { C.supabaseUrl = ''; C.supabaseKey = ''; C.sentryDsn = ''; C.vapidPublicKey = ''; }
   var ui = function () {
     var d2 = w.document;
@@ -55,7 +57,7 @@ window.stockEnvInit = function (w) {
       }
     } catch (e) { /* manifeste d'origine */ }
   };
-  if (w.document.readyState === 'loading') w.document.addEventListener('DOMContentLoaded', ui); else ui();
+  if (test) { if (w.document.readyState === 'loading') w.document.addEventListener('DOMContentLoaded', ui); else ui(); }
   return w.STOCK_ENV;
 };
 window.stockEnvInit(window);
