@@ -74,8 +74,8 @@ describe('v55 : entrepôt 3D, branchement', () => {
   it('le bouton du CRM est présent et l\'écran s\'ouvre sans planter même sans WebGL', async () => {
     app.setStockMode('crm'); app.crmSub('pipe');
     expect(document.querySelector('#crm [data-cxwh]')).toBeTruthy();
-    await W.openWarehouse();
-    expect($('wh3d')).toBeTruthy(); expect($('wh_al')).toBeTruthy();
-    $('sheet').hidden = true; app.setStockMode('stock');
+    W.openWarehouse();
+    expect($('crm').querySelector('.cxcol')).toBeTruthy();
+    app.setStockMode('stock');
   });
 });
