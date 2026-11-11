@@ -10,7 +10,7 @@ app.printHTML = printHTML;
 app.openProofs = openProofs;
 
 /* ===== v20 : preuves, visuels rÃ©seaux, calendrier, rappels, wrapped, dÃ©fis, import, aide, performances ===== */
-export const VER='v53';
+export const VER='v54';
 export const ldate=d=>d.getFullYear()+'-'+pad(d.getMonth()+1,2)+'-'+pad(d.getDate(),2);
 const fmtDT=t=>{const d=new Date(t);return fd(ldate(d))+' '+pad(d.getHours(),2)+':'+pad(d.getMinutes(),2)};
 export const fmtSize=b=>b>=1048576?(b/1048576).toFixed(1).replace('.',app.DS)+' '+t('Mo'):Math.max(1,Math.round(b/1024))+' '+t('Ko');
