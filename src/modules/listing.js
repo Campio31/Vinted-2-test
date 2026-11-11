@@ -1,5 +1,5 @@
 import { app } from '../state.js';
-import { andJoin, lc } from './core.js';
+import { andJoin, eur, lc } from './core.js';
 import { DB, DH } from './form.js';
 import { nrm } from './advice.js';
 
@@ -35,3 +35,30 @@ function vDesc(p){
  return[l1,[stateTxt,def].filter(Boolean).join(' '),t('Détails')+'\n'+det.map(r=>'• '+r[0]+t(' : ')+r[1]).join('\n'),dims.length?t('Mesures à plat')+'\n'+dims.join('\n'):'',t('Envoi soigné et rapide, suivi inclus. Lots possibles : ajoute plusieurs articles à tes favoris et écris-moi pour réduire les frais de port.'),tags].filter(Boolean).join('\n\n')}
 function vCategory(p){const g=t(p.genre==='Femme'?'Femmes':p.genre==='Enfant'?'Enfants':'Hommes');return g+' › '+t('Vêtements')+' › '+t(VCAT[p.cat]||'Autres vêtements')}
 export async function copyText(txt,label){try{await navigator.clipboard.writeText(txt);app.toast(t('{l} copié',{l:label}))}catch(e){const ta=document.createElement('textarea');ta.value=txt;ta.style.cssText='position:fixed;opacity:0';document.body.appendChild(ta);ta.select();try{document.execCommand('copy');app.toast(t('{l} copié',{l:label}))}catch(er){app.toast(t('Copie impossible : sélectionne le texte à la main'))}ta.remove()}}
+
+/* ---------- annonce en un geste : Vinted, Leboncoin, TikTok Live ---------- */
+export const PLATFORMS = [['vinted', 'Vinted', 60], ['lbc', 'Leboncoin', 70], ['tiktok', 'TikTok Live', 60]];
+const startPrice = p => { try { if (p.pvise > 0) return p.pvise; const a = app.advice(p); if (!a.ok) return 0; const sp = app.startPlan ? app.startPlan(p) : null; return sp ? sp.start : a.reco; } catch (e) { return 0; } };
+const hashtags = (p, extra) => {
+  const m = brandOk(p), g = { Homme: t('Homme'), Femme: t('Femme'), Enfant: t('Enfant') }[p.genre] || '', tag = s => '#' + nrm(s).replace(/[^a-z0-9]+/g, '');
+  return [...new Set([m && tag(m), tag(t(CATLBL[p.cat] || '')), g && tag(g), t('#secondemain'), t('#friperie'), ...(extra || [])].filter(x => x && x.length > 1))].join(' ');
+};
+/** Titre, description et hashtags d'une pièce pour une plateforme : 'vinted' (annonce complète), 'lbc' (Leboncoin, sobre) ou 'tiktok' (court, pour le live). */
+export function annonceFor(p, pf = 'vinted') {
+  if (pf === 'vinted') { const d = vDesc(p), parts = d.split('\n\n'), last = parts[parts.length - 1]; return { title: vTitle(p), desc: d, tags: /^#/.test(last) ? last : hashtags(p) }; }
+  const type = typeLbl(p), m = brandOk(p), cols = andJoin((p.coul || []).map(c => lc(tv(c)))), pr = startPrice(p), prTxt = pr ? eur(pr) : '';
+  const state = t('État : {c}', { c: vCond(p) }), dl = [...(p.defauts || []), ...(p.etat && !/^(ras|neuf.*|légères traces d'usure|très bon état|bon état|satisfaisant)$/i.test(p.etat) ? [p.etat] : [])];
+  const def = dl.length ? t(dl.length > 1 ? 'Points à signaler : {d} (visibles sur les photos).' : 'Point à signaler : {d} (visible sur les photos).', { d: dl.map(x => lc(tv(x))).join(', ') }) : '';
+  if (pf === 'lbc') {
+    const title = [type, m, p.modele, p.taille ? t('Taille {s}', { s: p.taille }) : '', cols].filter(Boolean).join(' ').slice(0, 70);
+    const l1 = [type, m, p.modele].filter(Boolean).join(' ') + (p.taille ? t(', taille {s}', { s: p.taille }) : '') + (cols ? ', ' + cols : '') + '.';
+    const det = [[t('Marque'), m], [t('Taille'), p.taille], [t('Matière'), (p.mat || []).map(tv).join(', ')], [t('Fabriqué en'), cn(p.madein)]].filter(r => r[1]).map(r => '• ' + r[0] + t(' : ') + r[1]);
+    const dims = [...DH, ...DB].filter(([k]) => p[k]).map(([k, l]) => '• ' + t(l) + t(' : ') + String(p[k]).replace('.', app.DS) + ' cm');
+    return { title, desc: [l1, [state, def].filter(Boolean).join(' '), det.join('\n'), dims.length ? t('Mesures à plat') + '\n' + dims.join('\n') : '', prTxt ? t('Prix : {p}', { p: prTxt }) : '', t('Remise en main propre possible ou envoi soigné (frais de port à la charge de l\'acheteur).')].filter(Boolean).join('\n\n'), tags: '' };
+  }
+  const title = ['🔥', type, m, p.taille, prTxt && '· ' + prTxt].filter(Boolean).join(' ').slice(0, 60);
+  const desc = [['🔥', type, m, p.taille ? t('taille {s}', { s: p.taille }) : '', cols].filter(Boolean).join(' '), t('Dispo en LIVE : écris « je prends » dans le chat !'), [state, prTxt].filter(Boolean).join(' · ') + (def ? '\n' + def : ''), t('Envoi rapide, lots possibles avec frais de port groupés.')].filter(Boolean).join('\n');
+  return { title, desc, tags: hashtags(p, [t('#live'), t('#vintage')]) };
+}
+app.annonceFor = annonceFor;
+app.PLATFORMS = PLATFORMS;

@@ -1,5 +1,5 @@
 import { app } from '../state.js';
-import { $, age, avail, days, dj, esc, eur, fd, isnum, lc, num, ok, profit, sold, title, today } from './core.js';
+import { $, LSg, LSs, age, avail, days, dj, esc, eur, fd, isnum, lc, num, ok, profit, sold, title, today } from './core.js';
 import { hydrate, phImg } from './photos.js';
 import { DB, DH, combo, genCode, mkForm } from './form.js';
 import { finDate, isFinal } from './finalisation.js';
@@ -23,9 +23,9 @@ function openSheet(id,m){
    ...(p.retours||[]).map(r=>['Retour',fd(r.d)+(isnum(r.p)?' · '+eur(r.p):'')+(r.m?' · '+tv(r.m):'')]),['Note',p.note]].filter(r=>r[1]);
   c.innerHTML=head(esc(title(p)))+(p.photo?phImg(p.photo,'big-ph'):'')+`<div class="card"><dl class="kv">${rows.map(r=>`<dt>${t(r[0])}</dt><dd>${esc(r[1])}</dd>`).join('')}</dl>${sold(p)?`<div class="pv" style="color:${profit(p)>=0?'var(--mint)':'var(--red)'}">${t('Bénéfice net : {b}',{b:eur(profit(p))})}</div>`:''}</div>
   ${app.incBanner(p)}${app.histHTML(p)}${avail(p)?'<div class="card" id="pc"></div>':''}<div class="acts">${avail(p)?'<button class="btn mint" id="a_sell" type="button">'+t('Marquer comme vendu')+'</button><button class="btn sec" id="a_ann" type="button">'+t('Créer l\'annonce Vinted')+'</button>':''}${sold(p)&&!isFinal(p)&&app.countsForFisc(p)?'<button class="btn mint" id="a_fin" type="button">'+t('Marquer la vente finalisée')+'</button>':''}${sold(p)?'<button class="btn" id="a_esale" type="button">'+t('Modifier la vente')+'</button><button class="btn sec" id="a_proof" type="button">'+t('Dossier de preuves')+app.proofN(p)+'</button><button class="btn sec" id="a_ret" type="button">'+t('Enregistrer un retour')+'</button><button class="btn sec" id="a_unsell" type="button">'+t('Annuler la vente')+'</button>':''}${p.statut==='Pas Disponible'?'<button class="btn sec" id="a_dis" type="button">'+t('Remettre en stock')+'</button>':''}${avail(p)?'<button class="btn sec" id="a_indis" type="button">'+t('Marquer indisponible')+'</button>':''}
-  <div class="acts two" style="margin:0"><button class="btn sec" id="a_edit" type="button">${t('Modifier')}</button><button class="btn sec" id="a_del" type="button">${t('Supprimer')}</button></div></div>`;
+  ${p.photo?'<button class="btn sec" id="a_studio" type="button">'+t('Retoucher la photo')+'</button>':''}<div class="acts two" style="margin:0"><button class="btn sec" id="a_edit" type="button">${t('Modifier')}</button><button class="btn sec" id="a_del" type="button">${t('Supprimer')}</button></div></div>`;
   const on=(i,f)=>{if($(i))$(i).onclick=f};
-  on('a_sell',()=>app.openSheet(id,'sell'));on('a_ret',()=>app.openSheet(id,'ret'));on('a_edit',()=>app.openSheet(id,'edit'));on('a_del',()=>app.openSheet(id,'del'));
+  on('a_sell',()=>app.openSheet(id,'sell'));on('a_ret',()=>app.openSheet(id,'ret'));on('a_edit',()=>app.openSheet(id,'edit'));on('a_studio',()=>app.openStudio(id));on('a_del',()=>app.openSheet(id,'del'));
   on('a_indis',()=>{app.save(Object.assign({},p,{statut:'Pas Disponible'}));closeSheet();app.toast(t('Marquée indisponible'),()=>app.save(p))});
   on('a_dis',()=>{app.save(Object.assign({},p,{statut:'Disponible'}));closeSheet();app.toast(t('Remise en stock'),()=>app.save(p))});
   on('a_ann',()=>app.openSheet(id,'ann'));on('a_esale',()=>app.openSheet(id,'esale'));on('a_proof',()=>app.openProofs(id));
@@ -33,17 +33,21 @@ function openSheet(id,m){
   on('a_unsell',()=>{const q=Object.assign({},p,{statut:'Disponible'});['pv','dv','canal','frais','vt','acheteur','exp','lot','lotn','fo','fin','cpt'].forEach(k=>delete q[k]);app.save(q);closeSheet();app.toast(t('Vente annulée : pièce remise en stock'),()=>app.save(p))});
   hydrate();if(avail(p))app.renderAdvice(p);
  }
- if(m==='ann'){const a=app.advice(p);
-  c.innerHTML=head(t('Annonce Vinted'))+`<div class="card"><div class="fld"><label class="l" for="an_t">${t('Titre')} <span id="an_c" style="text-transform:none;letter-spacing:0"></span></label><input type="text" id="an_t" maxlength="60"></div>
+ if(m==='ann'){const a=app.advice(p),PF=app.PLATFORMS;let pf=LSg('annPf','vinted');if(!PF.some(x=>x[0]===pf))pf='vinted';
+  c.innerHTML=head(t('Annonce'))+`<div class="chips" id="an_pf" style="margin-bottom:10px">${PF.map(([k,l])=>`<button type="button" class="chip sm${k===pf?' on':''}" data-pf="${k}">${t(l)}</button>`).join('')}</div>
+  <div class="card"><div class="fld"><label class="l" for="an_t">${t('Titre')} <span id="an_c" style="text-transform:none;letter-spacing:0"></span></label><input type="text" id="an_t"></div>
   <div class="fld"><label class="l" for="an_d">${t('Description')}</label><textarea id="an_d" rows="15" style="min-height:300px;font-size:15px"></textarea></div>
+  <div class="fld" id="an_hw"><label class="l" for="an_h">${t('Hashtags')}</label><textarea id="an_h" rows="2"></textarea></div>
   <dl class="kv" style="margin-top:14px"><dt>${t('Catégorie')}</dt><dd>${esc(app.vCategory(p))}</dd><dt>${t('État à choisir')}</dt><dd>${esc(app.vCond(p))}</dd><dt>${t('Prix conseillé')}</dt><dd>${a.ok?esc(eur(a.reco))+' ('+esc(lc(t(a.tier)))+')':a.fallback?esc(eur(a.fallback))+' '+t('(repère 2,5 × l\'achat)'):t('données insuffisantes')}</dd></dl>
-  <div class="hint">${t('Pour de meilleurs résultats : 4 à 6 photos (de face, de dos, étiquette, défauts) en lumière naturelle. Vérifie la catégorie dans Vinted, elle peut varier.')}</div></div>
+  <div class="hint">${t('Pour de meilleurs résultats : 4 à 6 photos (de face, de dos, étiquette, défauts) en lumière naturelle. Vérifie la catégorie sur la plateforme, elle peut varier.')}</div></div>
   <div class="acts two"><button class="btn" id="an_ct" type="button">${t('Copier le titre')}</button><button class="btn" id="an_cd" type="button">${t('Copier la description')}</button></div>
-  <div class="acts"><button class="btn sec" id="an_all" type="button">${t('Copier le titre et la description')}</button><div class="acts two" style="margin:0"><button class="btn sec" id="an_rg" type="button">${t('Régénérer')}</button><button class="btn sec" id="g_no" type="button">${t('Retour')}</button></div></div>`;
-  const fill=()=>{$('an_t').value=app.vTitle(p);$('an_d').value=app.vDesc(p);cnt()},cnt=()=>{$('an_c').textContent=$('an_t').value.length+'/60'};
+  <div class="acts"><button class="btn sec" id="an_ch" type="button">${t('Copier les hashtags')}</button><button class="btn sec" id="an_all" type="button">${t('Copier le titre et la description')}</button><div class="acts two" style="margin:0"><button class="btn sec" id="an_rg" type="button">${t('Régénérer')}</button><button class="btn sec" id="g_no" type="button">${t('Retour')}</button></div></div>`;
+  const max=()=>PF.find(x=>x[0]===pf)[2],cnt=()=>{$('an_c').textContent=$('an_t').value.length+'/'+max()};
+  const fill=()=>{const r=app.annonceFor(p,pf);$('an_t').value=r.title;$('an_d').value=r.desc;$('an_h').value=r.tags;$('an_hw').hidden=!r.tags;$('an_t').maxLength=max();cnt()};
   fill();$('an_t').oninput=cnt;
-  $('an_ct').onclick=()=>app.copyText($('an_t').value,t('Titre'));$('an_cd').onclick=()=>app.copyText($('an_d').value,t('Description'));
-  $('an_all').onclick=()=>app.copyText($('an_t').value+'\n\n'+$('an_d').value,t('Annonce'));
+  $('an_pf').onclick=e=>{const b=e.target.closest('[data-pf]');if(!b)return;pf=b.dataset.pf;LSs('annPf',pf);$('an_pf').querySelectorAll('.chip').forEach(x=>x.classList.toggle('on',x===b));fill()};
+  $('an_ct').onclick=()=>app.copyText($('an_t').value,t('Titre'));$('an_cd').onclick=()=>app.copyText($('an_d').value,t('Description'));$('an_ch').onclick=()=>app.copyText($('an_h').value,t('Hashtags'));
+  $('an_all').onclick=()=>app.copyText($('an_t').value+'\n\n'+$('an_d').value+($('an_h').value&&pf!=='vinted'?'\n\n'+$('an_h').value:''),t('Annonce'));
   $('an_rg').onclick=()=>{fill();app.toast(t('Annonce régénérée'))};$('g_no').onclick=()=>app.openSheet(id)}
  if(m==='edit'){c.innerHTML=head(t('Modifier'))+`<div class="card frm" id="fed"></div>`;
   mkForm($('fed'),Object.assign({},p),{mode:'edit',open:true,onCancel:()=>app.openSheet(id),onSubmit(S){const q=Object.assign({},p,S);q.id=p.id;q.statut=p.statut;if(!S.photo)delete q.photo;if(!q.code||combo(q)!==combo(p)){const cd=genCode(q);if(cd)q.code=cd;else delete q.code}app.save(q);app.openSheet(id);app.toast(t('Enregistré ✓'))}})}
@@ -53,12 +57,12 @@ function openSheet(id,m){
   <div class="fld" id="s_w"><label class="l" for="s_prix">${t('Prix de vente')}</label><div class="price"><input type="text" inputmode="decimal" id="s_prix" placeholder="0${app.DS}00" value="${pr0?app.fN(pr0):''}"><span>€</span></div>${adv.ok?`<div class="hint">${t('Prix conseillé : {p} ({n} ventes comparables). Modifie-le si besoin.',{p:eur(adv.reco),n:adv.n})}</div>`:''}</div>
   <div class="fld"><label class="l" for="s_plat">${t('Vendu sur')}</label><input type="text" id="s_plat" value="${esc(app.pfShow(cn0))}"><div class="chips sug">${CANAUX.map(x=>`<button type="button" class="chip sm${x===cn0?' on':''}" data-t="s_plat" data-v="${x}">${tv(x)}</button>`).join('')}</div></div>
   ${app.cptField('s_cpt',cp0&&cp0.id)}
-  <div class="row2 fld"><div><label class="l" for="s_date">${t('Date de vente')}</label><input type="date" id="s_date" value="${today()}"></div><div><label class="l" for="s_frais">${t('Frais')}</label><div class="price"><input type="text" inputmode="decimal" id="s_frais" value="${app.fN(app.defFrais(pr0||0,cn0,cp0&&cp0.id))}"><span>€</span></div></div></div>
+  <div class="row2 fld"><div><label class="l" for="s_date">${t('Date de vente')}</label><input type="date" id="s_date" value="${today()}"></div><div><label class="l" for="s_frais">${t('Frais')}</label><div class="price"><input type="text" inputmode="decimal" id="s_frais" value="${app.fN(app.defFrais(pr0||0,cn0,cp0&&cp0.id,p))}"><span>€</span></div></div></div>
   <div class="hint">${t('Frais : commission, envoi à ta charge… Sur Vinted, les frais de protection sont payés par l\'acheteur.')}</div><div class="fld" style="margin-top:12px"><label class="l" for="s_ps">${t('@pseudo de l\'acheteur (facultatif)')}</label><input type="text" id="s_ps" placeholder="@${t('pseudo')}" autocapitalize="none" autocomplete="off"></div><div class="pv" id="s_pv"></div></div>
   <div class="acts"><button class="btn mint" id="s_ok" type="button">${t('Valider la vente')}</button>${back}</div>`;
   let ft=false;
   const pv=()=>{const x=num($('s_prix').value),f=num($('s_frais').value)||0;$('s_pv').innerHTML=isNaN(x)?t('Bénéfice net : —'):app.rentaHTML(app.renta(p.achat||0,x,f,app.ageDelai(p),true))};
-  const auto=()=>{const cn=app.pfKey($('s_plat').value.trim())||'Vinted',cps=app.cptFollow('s_cpt',cn);if(ft)return;const x=num($('s_prix').value);$('s_frais').value=app.fN(app.defFrais(isNaN(x)?0:x,cn,cps||undefined))};
+  const auto=()=>{const cn=app.pfKey($('s_plat').value.trim())||'Vinted',cps=app.cptFollow('s_cpt',cn);if(ft)return;const x=num($('s_prix').value);$('s_frais').value=app.fN(app.defFrais(isNaN(x)?0:x,cn,cps||undefined,p))};
   pv();$('s_prix').oninput=()=>{auto();pv()};$('s_frais').oninput=()=>{ft=true;pv()};
   document.querySelectorAll('[data-t="s_plat"]').forEach(b=>b.addEventListener('click',()=>setTimeout(()=>{auto();pv()},0)));
   $('g_no').onclick=()=>app.openSheet(id);

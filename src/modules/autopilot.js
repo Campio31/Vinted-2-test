@@ -1,7 +1,8 @@
 import { app } from '../state.js';
-import { $, LSg, LSs, addDays, avail, days, esc, eur, fd, ok, title, today } from './core.js';
+import { $, LSg, LSs, addDays, avail, days, esc, eur, fd, ok, profit, sold, title, today } from './core.js';
 import { CFG0 } from './settings-core.js';
-import { advice } from './advice.js';
+import { advice, dropCfg, nextDrop } from './advice.js';
+import { crmTodo } from './crm.js';
 import { colisList } from './colis.js';
 import { pendingSales } from './finalisation.js';
 import { incomplete } from './complete.js';
@@ -19,7 +20,7 @@ import { streakInfo } from './gamification.js';
 Object.assign(CFG0, { apMode: 'assist', apLog: [], apStats: { lots: 0, items: 0, min: 0 }, rules: {}, ruleSnooze: {}, apSnooze: {} });
 
 export const AP_MODES = [['manual', 'Manuel', 'Syno liste les tâches, tu fais tout'], ['assist', 'Assisté', 'Syno prépare, tu valides'], ['auto', 'Automatique encadré', 'Bientôt']];
-const MIN = { fin: .3, colis: .5, pub: 1, prix: 1.5 };   /* minutes économisées par pièce, estimation */
+const MIN = { fin: .3, colis: .5, pub: 1, prix: 1.5, baisse: 1.5 };   /* minutes économisées par pièce, estimation */
 const MAXI = 5;                                         /* éléments montrés par tâche */
 export const apMode = () => (app.cfg.apMode === 'manual' ? 'manual' : 'assist');
 
@@ -29,11 +30,27 @@ export function batchOf(kind) {
   if (kind === 'fin') return pendingSales().map(p => ({ p, patch: { fin: td }, txt: t('Marquer finalisée') + ' · ' + eur(p.pv || 0) }));
   if (kind === 'colis') return colisList().map(p => ({ p, patch: { exp: td }, txt: t('Colis prêt') + (p.bac ? ' · ' + t('Bac {b}', { b: p.bac }) : '') }));
   if (kind === 'pub') return app.P.filter(p => avail(p) && !ok(p.pub)).map(p => ({ p, patch: { pub: td }, txt: t('Marquer publiée') }));
+  if (kind === 'baisse') {
+    return app.P.map(p => ({ p, d: nextDrop(p, td) })).filter(x => x.d).sort((a, b) => b.d.since - a.d.since)
+      .map(x => ({ p: x.p, patch: { pvise: x.d.price, pdrop: td }, txt: eur(x.d.cur) + ' → ' + eur(x.d.price) + ' · ' + t('en ligne depuis {n} jours', { n: x.d.since }) }));
+  }
   if (kind === 'prix') {
     return app.P.filter(p => avail(p) && ok(p.pub) && days(p.pub, td) >= ruleParam('dormant')).map(p => ({ p, a: advice(p) })).filter(x => x.a && x.a.ok && x.a.reco > 0 && !(x.p.pvise > 0 && x.p.pvise <= x.a.reco))
       .sort((a, b) => days(b.p.pub, td) - days(a.p.pub, td)).map(x => ({ p: x.p, patch: { pvise: x.a.reco }, txt: (x.p.pvise > 0 ? eur(x.p.pvise) + ' → ' : '') + t('prix conseillé {p}', { p: eur(x.a.reco) }) }));
   }
   return [];
+}
+
+/** Catégories et marques dont la marge sur 90 jours est sous le seuil des Réglages (au moins 3 ventes). */
+export function lowMargins() {
+  const th = +app.cfg.margeAlert; if (!(th > 0)) return [];
+  const td = today(), S = app.P.filter(p => sold(p) && ok(p.dv) && days(p.dv, td) <= 90 && (p.pv || 0) > 0), out = [];
+  [['cat', p => p.cat], ['marque', p => p.marque]].forEach(([k, f]) => {
+    const g = {};
+    S.forEach(p => { const v = f(p); if (v && !/^non /i.test(v)) (g[v] = g[v] || []).push(p); });
+    Object.entries(g).forEach(([v, L]) => { if (L.length < 3) return; const ca = L.reduce((a, p) => a + p.pv, 0), ben = L.reduce((a, p) => a + profit(p), 0), m = ben / ca * 100; if (m < th) out.push({ k, v, n: L.length, marge: m }); });
+  });
+  return out.sort((a, b) => a.marge - b.marge);
 }
 
 /* ---- les tâches, de la plus importante à la moins importante ---- */
@@ -45,6 +62,11 @@ function baseTasks() {
   const col = batchOf('colis'); if (col.length) mk('colis', 'r', col.length, t(col.length > 1 ? '{n} colis à préparer' : '{n} colis à préparer', { n: col.length }), t('Les acheteurs attendent leur envoi : les plus anciens d\'abord.'), { kind: 'colis', go: 'colis' });
   const pub = batchOf('pub'); if (pub.length) mk('pub', 'o', pub.length, t(pub.length > 1 ? '{n} pièces à publier' : '{n} pièce à publier', { n: pub.length }), t('Elles ne peuvent pas se vendre tant qu\'elles ne sont pas en ligne.'), { kind: 'pub', go: 'list:Apub' });
   const prix = batchOf('prix'); if (prix.length) mk('prix', 'n', prix.length, t(prix.length > 1 ? '{n} prix à examiner' : '{n} prix à examiner', { n: prix.length }), t('En ligne depuis plus de {n} jours : le prix conseillé peut accélérer la vente.', { n: ruleParam('dormant') }), { kind: 'prix', go: 'list:Enligne' });
+  const bs = batchOf('baisse'); if (bs.length) mk('baisse', 'o', bs.length, t(bs.length > 1 ? '{n} baisses de prix à valider' : '{n} baisse de prix à valider', { n: bs.length }), t('Sans vente après {d} jours en ligne : baisse de {p} %, jamais sous ton prix d\'achat plus ta marge minimum.', { d: dropCfg().days, p: dropCfg().pct }), { kind: 'baisse', go: 'list:Enligne' });
+  const cr = crmTodo();
+  if (cr.relances.length) mk('relance', 'o', cr.relances.length, t(cr.relances.length > 1 ? '{n} acheteurs à relancer' : '{n} acheteur à relancer', { n: cr.relances.length }), t('Une relance est prévue aujourd\'hui ou en retard : un message prêt à copier t\'attend dans la fiche de l\'acheteur.'), { go: 'crm:buyers', btn: t('Ouvrir le CRM') });
+  if (cr.offres.length) mk('offre', 'o', cr.offres.length, t(cr.offres.length > 1 ? '{n} offres en attente' : '{n} offre en attente', { n: cr.offres.length }), t('Réponds aux acheteurs qui négocient : une offre qui attend se refroidit vite.'), { go: 'crm:pipe', btn: t('Ouvrir le CRM') });
+  const lm = lowMargins(); if (lm.length) mk('marge', 'o', lm.length, t('Marge faible : {l}', { l: lm.slice(0, 2).map(x => tv(x.v) + ' (' + Math.round(x.marge) + ' %)').join(', ') }), t('Sous ton seuil de {s} % sur les 90 derniers jours : revois les prix d\'achat ou de vente.', { s: +app.cfg.margeAlert }), { go: 'dash', btn: t('Voir le Bilan') });
   const inc = A.filter(incomplete).length + app.P.filter(p => !avail(p) && incomplete(p)).length; if (inc) mk('inc', 'n', inc, t(inc > 1 ? '{n} fiches à compléter' : '{n} fiche à compléter', { n: inc }), t('Il manque la grade, l\'état ou le type : 10 fiches en 2 minutes.'), { go: 'complete', btn: t('Compléter') });
   const kind = goalKinds().find(k => goalCalc(k, 'm')), g = kind && goalCalc(kind, 'm');
   if (g && g.cur < g.g && +td.slice(8) >= 15) mk('goal', 'n', Math.round(g.pct * 100), t('Objectif du mois : {p} %', { p: Math.round(g.pct * 100) }), t('Il reste {r} pour l\'atteindre.', { r: eur(g.reste) }), { go: 'courbe', btn: t('Voir l\'objectif') });
@@ -76,6 +98,10 @@ export const RULES = [
   { id: 'plafond', name: 'Plafond micro', d: 'Syno te prévient à 75 % puis 90 % du plafond, avec la projection.', task: 'plafond', due: () => true },
   { id: 'fourn', name: 'Fournitures basses', d: 'Quand un article passe sous son seuil, « à racheter » s\'ajoute à ta journée.', task: 'fourn', due: () => true },
   { id: 'pub', name: 'Nouvelles pièces', d: 'Quand trop de pièces ne sont pas encore publiées, Syno prépare le lot « publier ».', task: 'pub', param: { k: 'nb', def: 10, min: 3, max: 100, u: 'pièces' }, due: () => app.P.filter(p => avail(p) && !ok(p.pub)).length > ruleParam('pub') },
+  { id: 'baisse', name: 'Baisse automatique', d: 'Après N jours en ligne sans vente, Syno prépare une baisse de prix à valider (N et le pourcentage se règlent dans Réglages).', task: 'baisse', due: () => true },
+  { id: 'relances', name: 'Relances acheteurs', d: 'Les relances prévues dans le CRM s\'ajoutent à ta journée.', task: 'relance', due: () => true },
+  { id: 'offres', name: 'Offres en attente', d: 'Les offres reçues qui attendent une réponse s\'ajoutent à ta journée.', task: 'offre', due: () => true },
+  { id: 'marge', name: 'Marge faible', d: 'Syno te prévient quand une catégorie ou une marque passe sous ton seuil de marge (Réglages).', task: 'marge', due: () => true },
   { id: 'rapport', name: 'Fin de mois', d: 'Le dernier jour du mois, Syno te prépare le rapport PDF du mois.', make: () => lastDayOfMonth() && app.P.length ? { id: 'r-rapport', tone: 'n', n: 0, title: t('Rapport du mois'), why: t('Le mois se termine : enregistre ton rapport en PDF.'), go: 'rapport', btn: t('Ouvrir les rapports') } : null },
   { id: 'sauvegarde', name: 'Sauvegarde', d: 'Chaque semaine, Syno te rappelle de sauvegarder.', task: 'backup', due: () => true },
   { id: 'serie', name: 'Série de publication', d: 'En fin de journée, Syno te prévient si ta série est en danger.', make: () => { const s = streakInfo(); return s.n > 0 && !s.today && new Date().getHours() >= 17 ? { id: 'r-serie', tone: 'o', n: s.n, title: t('Ta série de {n} jours est en danger', { n: s.n }), why: t('Publie une pièce avant la fin de la journée.'), go: 'list:Apub', btn: t('Voir à publier') } : null; } },
@@ -150,7 +176,7 @@ let openId = '', excl = new Set(), showLog = false, showSet = false, jOpen = fal
 /* la carte se réduit d'un appui, même s'il reste des tâches : elle reste réduite jusqu'à la fin de la journée */
 const isShut = () => LSg('jShut', '') === today();
 app.openJournee = () => { jOpen = true; LSs('jShut', ''); go('dash'); };
-const KIND_LABEL = { fin: 'Ventes finalisées', colis: 'Colis prêts', pub: 'Pièces publiées', prix: 'Prix mis à jour' };
+const KIND_LABEL = { fin: 'Ventes finalisées', colis: 'Colis prêts', pub: 'Pièces publiées', prix: 'Prix mis à jour', baisse: 'Baisses de prix' };
 function taskHTML(x) {
   const mode = apMode(), batch = x.kind && mode === 'assist', isOpen = openId === x.id && batch;
   const body = isOpen ? (() => {
@@ -203,6 +229,7 @@ function goTo(spec) {
   if (k === 'sales') { app.salesFilter(v || 'all'); return go('sales'); }
   if (k === 'list') { app.filt = v || 'Tous'; app.lim = 60; return go('list'); }
   if (k === 'set') return go('set');
+  if (k === 'crm') { if (app.setStockMode) app.setStockMode('crm'); if (app.crmSub) app.crmSub(v || 'pipe'); return go('list'); }
   if (k) app.openTool(k);
 }
 /* glisser une tâche : à droite = la faire (comme un appui), à gauche = la reporter à demain */

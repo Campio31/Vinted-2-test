@@ -51,7 +51,7 @@ export const mrg=(a,b)=>[...new Set([...(a||[]),...(b||[])])];
 const dimsFor=cat=>HAUT.includes(cat)?DH:BAS.includes(cat)?DB:[...DH,...DB];
 /* Groupes dans l'ordre de saisie : un seul est ouvert au départ (la catégorie), le suivant s'ouvre quand le précédent est rempli. */
 /* 4 étapes guidées ; dans chaque étape, un paramètre à la fois (Suivant / Passer). L'ordre suit l'ordre d'affichage de chaque étape. */
-const STEPS=[['Article',['cat','sub','marque','genre']],['Caractéristiques',['taille','coul','mat','dim','madein']],['État',['grade','photo','etat']],['Achat et gestion',['achat','prov','stk','ballot','dates','det']]];
+const STEPS=[['Article',['cat','sub','marque','genre']],['Caractéristiques',['taille','coul','mat','dim','madein']],['État',['grade','photo','etat']],['Achat et gestion',['achat','prov','envoi','stk','ballot','dates','det']]];
 const ORDER=STEPS.flatMap(s=>s[1]);
 const stepOf=k=>STEPS.findIndex(s=>s[1].includes(k));
 const isNeuf=e=>/^neuf/i.test(e||'');
@@ -79,7 +79,7 @@ export function mkForm(host,S,o){
     l2=(p.stock>=3?t('Attention : '):'')+t('déjà {n} en stock (même {c})',{n:p.stock,c:andJoin(cr)})}}
   setPotBg(lvl);
   /* prix de vente conseillé : l'appli le propose, on ne le saisit plus */
-  const ra=S.cat?app.advice(S):null,recoRow=ra&&ra.ok&&ra.reco>0?`<div class="pr2 reco"><span>${t('Prix de vente conseillé')}</span><b>${eur(ra.reco)}</b></div>`:'';
+  const ra=S.cat?app.advice(S):null,sp=ra&&ra.ok?app.startPlan(S):null,recoRow=ra&&ra.ok&&ra.reco>0?`<div class="pr2 reco"><span>${t('Prix de départ conseillé')}</span><b>${eur(sp?sp.start:ra.reco)}</b></div>${sp&&sp.on&&sp.steps.length?`<div class="ps">${esc(t('Puis −{p} % tous les {d} jours si rien ne se vend : {l}',{p:sp.pct,d:sp.days,l:sp.steps.map(x=>eur(x.price)).join(' → ')}))}</div>`:''}<div class="pr2"><span>${t('Prix de vente conseillé')}</span><b>${eur(ra.reco)}</b></div>${S.poids&&app.cfg.shipOn?`<div class="pr2"><span>${t('Envoi estimé')}</span><b>${eur(app.shipFor(S))}</b></div>`:''}`:'';
   return`<div class="pot pot-${lvl}${p.stock>=3?' sat':''}" id="pot"><div class="pt"><span class="mono">${t('potentiel de vente')}${tag?' · '+esc(tag):''}</span><b>${esc(tt)}</b></div>${rows}${recoRow}<div class="ps">${esc(note)}</div>${l2?`<div class="ps w">${esc(l2)}</div>`:''}</div>`} function updatePot(){const e=host.querySelector('#pot');if(!e)return;const t=document.createElement('div');t.innerHTML=potHTML();e.replaceWith(t.firstChild)}
  /* les étapes suivent les onglets de saisie, dans l'ordre : l'étape en cours est le premier onglet ouvert, les précédents sont faits ou passés */
  const stepKeys=n=>STEPS[n][1].filter(k=>(k!=='sub'||hasSub())&&(k!=='stk'||app.hasComptes()));
@@ -95,7 +95,7 @@ export function mkForm(host,S,o){
   const sizesSorted=sizes.sort((a,b)=>{const ia=SIZES.indexOf(a),ib=SIZES.indexOf(b);if(ia>=0&&ib>=0)return ia-ib;if(ia>=0)return-1;if(ib>=0)return 1;return String(a).localeCompare(String(b),'fr',{numeric:true})});
   const rb=recentBrands(),sug=suggestBrand(S.marque);
   const dimN=DK.filter(k=>S[k]!=null&&S[k]!=='').length,detN=['modele','collab','bac','note'].filter(k=>Array.isArray(S[k])?S[k].length:S[k]).length,nDef=isNeuf(S.etat)?0:(S.defauts||[]).length,nDates=[S.entree,S.pub].filter(Boolean).length;
-  const sums={cat:tv(S.cat),sub:tv(S.sub),marque:S.marque,taille:S.taille,genre:tv(S.genre),achat:S.achat!==''&&S.achat!=null&&num(S.achat)>=0?eur(num(S.achat)):'',prov:tv(S.prov),coul:(S.coul||[]).map(x=>tv(x)).join(', '),mat:(S.mat||[]).map(x=>tv(x)).join(', '),photo:S.photo?t('Ajoutée'):'',dim:dimN?tn(dimN,'valeur','valeurs'):'',etat:[S.etat&&tv(S.etat),nDef?tn(nDef,'défaut','défauts'):''].filter(Boolean).join(' · '),ballot:S.ballot||'',madein:S.madein?cn(S.madein):'',dates:nDates?tn(nDates,'date','dates'):'',det:detN?tn(detN,'renseigné','renseignés'):''};
+  const sums={cat:tv(S.cat),sub:tv(S.sub),marque:S.marque,taille:S.taille,genre:tv(S.genre),achat:S.achat!==''&&S.achat!=null&&num(S.achat)>=0?eur(num(S.achat)):'',prov:tv(S.prov),coul:(S.coul||[]).map(x=>tv(x)).join(', '),mat:(S.mat||[]).map(x=>tv(x)).join(', '),photo:S.photo?t('Ajoutée'):'',dim:dimN?tn(dimN,'valeur','valeurs'):'',etat:[S.etat&&tv(S.etat),nDef?tn(nDef,'défaut','défauts'):''].filter(Boolean).join(' · '),ballot:S.ballot||'',envoi:S.poids?S.poids+' kg':'',madein:S.madein?cn(S.madein):'',dates:nDates?tn(nDates,'date','dates'):'',det:detN?tn(detN,'renseigné','renseignés'):''};
   /* l'étape affichée est celle du premier paramètre ouvert */
   if(!edit){const i0=ORDER.findIndex(k=>G.has(k)&&(k!=='sub'||hasSub())&&(k!=='stk'||app.hasComptes()));if(i0>=0)curStep=stepOf(ORDER[i0])}
   const sec=(k,label,body,opt)=>{if(!edit&&stepOf(k)!==curStep)return'';opt=opt||{};const op=G.has(k),sm=opt.sumHtml!==undefined?opt.sumHtml:esc(sums[k]||'');
@@ -111,6 +111,7 @@ export function mkForm(host,S,o){
    sec('grade','Grade',group('grade',GRADES,false,false),{sumHtml:S.grade?`<span class="pill g-${esc(S.grade)}">${esc(S.grade)}</span>`:''})+
    sec('achat',"Prix d'achat",`<div class="price"><input type="text" inputmode="decimal" id="fa" placeholder="0${app.DS}00" value="${S.achat!=null&&S.achat!==''?esc(String(S.achat).replace('.',app.DS)):''}"><span>€</span></div>`,{next:'Suivant'})+
    sec('prov','Provenance',group('prov',provs,false,true))+
+   sec('envoi','Poids du colis',`<div class="chips" data-g="poids">${[0.5,1,2,5,10].map(k=>`<button type="button" class="chip${String(S.poids)===String(k)?' on':''}" data-f="poids" data-v="${k}">${k} kg</button>`).join('')}</div><div class="hint">${S.cat?t('Suggestion pour cette catégorie : {k} kg',{k:app.weightOf({cat:S.cat})||1}):t('Sert à compter le vrai prix d\'envoi.')}${app.cfg.shipOn&&(S.poids||S.cat)?' · '+t('Envoi estimé : {p}',{p:eur(app.shipFor(S.poids?S:{cat:S.cat}))}):''}</div>`,{next:'Passer'})+
    (app.hasComptes()?sec('stk','Compte',`<div class="chips" data-g="stk">${app.comptes().map(c=>`<button type="button" class="chip${S.stk===c.id?' on':''}" data-f="stk" data-v="${esc(c.id)}">${esc(c.n)}</button>`).join('')}</div><div class="hint">${t('Le compte où tu comptes vendre cette pièce : tu pourras ranger ton stock par compte.')}</div>`,{next:'Passer',sumHtml:esc((app.comptes().find(c=>c.id===S.stk)||{}).n||'')}):'')+
    sec('coul','Couleur',group('coul',mrg(COUL0,freq('coul',1)),true,true),{next:'Passer'})+
    sec('mat','Matière',group('mat',mrg(MAT0,freq('mat',1)),true,true),{next:'Passer'})+

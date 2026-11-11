@@ -1,5 +1,5 @@
 import { app } from '../state.js';
-import { $, LSg, LSs, age, avail, days, esc, eur, isnum, ok, sold } from './core.js';
+import { $, LSg, LSs, age, avail, days, esc, eur, isnum, ok, sold, today } from './core.js';
 
 app.advice = advice;
 app.renderAdvice = renderAdvice;
@@ -41,8 +41,35 @@ function renderAdvice(p){const box=$('pc');if(!box)return;const a=advice(p);
  if(!a.ok)body=`<p class="sub" style="margin:0">${t('Pas assez de ventes comparables dans ta base ({n}, il en faut au moins 3).',{n:tn(a.n,'trouvée','trouvées')})}</p>${a.fallback?`<div class="pv">${t('Repère : {p} (2,5 × le prix d\'achat)',{p:eur(a.fallback)})}</div>`:''}`;
  else body=`<div class="pc-top"><div class="big">${eur(a.reco)}</div><span class="tag">${esc(t(a.tier))}</span></div>
   <div class="hint" style="margin-top:2px">${esc(t('{m} par rapport au prix d\'achat · basé sur {n} ventes ({l})',{m:(a.margin>=0?'+':'')+eur(a.margin),n:a.n,l:a.label}))}</div>
-  <div class="pv">${app.rentaHTML(app.renta(p.achat||0,a.reco,app.defFrais(a.reco,'Vinted'),(a.tiers.find(x=>x.name===a.tier)||{}).delai))}</div>
+  <div class="pv">${app.rentaHTML(app.renta(p.achat||0,a.reco,app.defFrais(a.reco,'Vinted',undefined,p),(a.tiers.find(x=>x.name===a.tier)||{}).delai))}</div>
   <div class="pc-t">${a.tiers.map(tr=>`<div class="pc-r${tr.name===a.tier?' on':''}"><span>${esc(t(tr.name))}</span><b>${eur(nice(tr.price))}</b><small>${tr.delai!==null?t('vendu en {n} j',{n:Math.round(tr.delai)}):t('délai inconnu')} · ${tn(tr.n,'vente','ventes')}</small></div>`).join('')}</div>
   ${a.note?`<div class="hint">${esc(a.note)}</div>`:''}`;
  box.innerHTML=`<h3>${t('Prix conseillé')}</h3><span class="l" style="margin-top:8px">${t('Je veux vendre en moins de')}</span><div class="chips" style="margin-bottom:12px">${chips}</div>${body}<div class="hint">${t('Estimation calculée à partir de tes ventes passées, à ajuster selon l\'état réel de la pièce.')}</div>`;
  box.onclick=e=>{const b=e.target.closest('[data-td]');if(b){LSs('targetDays',+b.dataset.td);renderAdvice(p)}}}
+
+/* ---------- prix de départ et baisse automatique ---------- */
+/* Prix de départ = le prix conseillé (ventes comparables) + une petite marge de négociation. Ensuite, après N jours en ligne sans vente,
+   le prix baisse de X %, plusieurs fois, sans jamais passer sous le prix d'achat plus ta marge minimum. N et X se règlent dans Réglages. */
+export const dropCfg = () => ({ on: app.cfg.dropOn !== false, days: Math.max(5, Math.min(90, +app.cfg.dropDays || 21)), pct: Math.max(3, Math.min(40, +app.cfg.dropPct || 10)) });
+/** Plancher : jamais sous le prix d'achat plus la marge minimum. */
+export const priceFloor = p => nice(Math.max(0.5, (isnum(p.achat) ? p.achat : 0) + (+app.cfg.minM || 0)));
+export function startPlan(p) {
+  const a = advice(p); if (!a.ok) return null;
+  const d = dropCfg(), floor = priceFloor(p), start = Math.max(floor, nice(a.reco * 1.08)), steps = [];
+  let pr = start;
+  for (let k = 1; k <= 3; k++) { pr = Math.max(floor, nice(pr * (1 - d.pct / 100))); steps.push({ day: d.days * k, price: pr }); }
+  return { start, floor, steps, days: d.days, pct: d.pct, n: a.n, label: a.label, reco: a.reco, on: d.on };
+}
+/** Prochaine baisse d'une pièce en ligne : { cur, price, since } ou null (pas encore l'heure, déjà au plancher, ou pas de prix connu). */
+export function nextDrop(p, td = today()) {
+  const d = dropCfg(); if (!d.on || !avail(p) || !ok(p.pub)) return null;
+  const last = [p.pub, p.pdrop].filter(ok).sort().pop(), since = days(last, td);
+  if (since < d.days) return null;
+  let cur = p.pvise > 0 ? p.pvise : 0;
+  if (!cur) { const a = advice(p); cur = a.ok ? a.reco : 0; }
+  if (!cur) return null;
+  const floor = priceFloor(p), price = Math.max(floor, nice(cur * (1 - d.pct / 100)));
+  return price < cur ? { cur, price, since } : null;
+}
+app.startPlan = startPlan;
+app.nextDrop = nextDrop;

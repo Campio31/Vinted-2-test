@@ -186,6 +186,9 @@ function draw() {
   hydrate();
 }
 export const crmDraw = draw;
+/** Ouvre directement un sous-écran du CRM : 'pipe', 'buyers' ou 'log'. */
+export function crmSub(k) { sub = ['pipe', 'buyers', 'log'].includes(k) ? k : 'pipe'; LSs('crmSub', sub); draw(); }
+app.crmSub = crmSub;
 let mode = LSg('stkMode', 'stock');
 function applyMode() {
   const crm = $('crm'); if (!crm) return;

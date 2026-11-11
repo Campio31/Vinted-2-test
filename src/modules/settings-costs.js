@@ -3,6 +3,7 @@ import { $, esc, num } from './core.js';
 import { GKEY, goalKinds } from './goals.js';
 import { DEFAULTS } from './platforms.js';
 import { TI } from './tools-index.js';
+import { CARRIERS, tableOf } from './shipping.js';
 
 /* ---------- objectifs et coûts (écran Réglages) ---------- */
 /* Quatre blocs : objectifs, frais par colis, plateformes, seuils du feu vert. Les identifiants des champs (c_goal, c_emb…) sont ceux des tests et du gestionnaire plus bas. */
@@ -28,16 +29,28 @@ export function renderCfg() {
       + `<div class="hint">${t('Laisse un champ vide pour ne pas fixer d\'objectif.')}</div>`)
     + grp('box', 'Frais par colis', 'Ajoutés aux frais de chaque vente',
       `<div class="row2">${f('c_emb', 'Emballage par colis (€)', app.cfg.emb, '€')}${f('c_port', 'Envoi à ta charge (€)', app.cfg.port, '€')}</div>`)
+    + grp('box', 'Frais de port réels', 'Un barème par transporteur et par poids (estimations de départ, à vérifier)',
+      `<label class="chk cfr"><input type="checkbox" id="c_shipOn"${app.cfg.shipOn ? ' checked' : ''}><span><b>${t('Utiliser le barème')}</b><small>${t('Le prix d\'envoi du poids de chaque pièce remplace le montant fixe ci-dessus.')}</small></span></label>`
+      + `<div class="seg" role="group" aria-label="${esc(t('Transporteur'))}">${CARRIERS.map(([id, n]) => `<button type="button" class="${(app.cfg.shipCar || 'mr') === id ? 'on' : ''}" data-shc="${id}">${esc(n)}</button>`).join('')}</div>`
+      + `<div class="row2">${tableOf(app.cfg.shipCar || 'mr').map(([kg, pr]) => f('c_sh_' + kg, kg + ' kg', pr, '€')).join('')}</div>`
+      + `<div class="hint">${t('Ces prix sont des estimations : ils changent, corrige-les avec les tarifs de ton transporteur.')}</div>`)
+    + grp('ok', 'Prix de départ et alertes', 'Baisse automatique des annonces et alerte sur les marges faibles',
+      `<label class="chk cfr"><input type="checkbox" id="c_dropOn"${app.cfg.dropOn !== false ? ' checked' : ''}><span><b>${t('Baisse automatique')}</b><small>${t('Syno prépare une baisse de prix à valider dans « Ma journée ».')}</small></span></label>`
+      + `<div class="row2">${f('c_dropDays', 'Après (jours en ligne)', app.cfg.dropDays || 21, 'j')}${f('c_dropPct', 'Baisse de (%)', app.cfg.dropPct || 10, '%')}</div>`
+      + `<div class="row2">${f('c_margeAlert', 'Alerte si la marge d\'une catégorie ou d\'une marque passe sous (%)', app.cfg.margeAlert || '', '%')}</div>`
+      + `<div class="hint">${t('Laisse vide pour couper l\'alerte. Elle compte les ventes des 90 derniers jours, avec au moins 3 ventes.')}</div>`)
     + grp('shop', 'Plateformes de vente', 'Le nom que tu veux, et la commission que chacune te prélève (0 si aucune)',
       [1, 2].map(i => `<div class="pfr"><div class="cfld"><label class="l" for="c_pf${i}">${t('Plateforme {n}', { n: i })}</label><input type="text" id="c_pf${i}" value="${esc(app.cfg['pf' + i] || '')}" placeholder="${esc(DEFAULTS[i])}" maxlength="24" autocomplete="off"></div>${f(i === 1 ? 'c_comV' : 'c_comT', 'Commission (%)', i === 1 ? app.cfg.comV : app.cfg.comT, '%')}</div>`).join('')
       + `<div class="cprev">${[1, 2].map(i => `<span>${t('Une vente à {p} € sur {n} : {f} € de frais', { p: ex, n: esc(pf(i)), f: eurS(prev(i)) })}</span>`).join('')}</div>`)
     + grp('ok', 'Feu vert des pièces', 'À partir de quand une pièce est jugée rentable',
       `<div class="row2">${f('c_roi', 'ROI minimum pour le vert (%)', app.cfg.roi, '%')}${f('c_minM', 'Marge minimum pour le vert (€)', app.cfg.minM, '€')}</div>`);
 }
-$('cfgc').addEventListener('click', e => { const b = e.target.closest('[data-gm]'); if (!b) return; app.setCfg({ goalMode: b.dataset.gm }); document.activeElement.blur(); renderCfg(); app.renderAll(); });
+$('cfgc').addEventListener('click', e => { const sc = e.target.closest('[data-shc]'); if (sc) { app.setCfg({ shipCar: sc.dataset.shc }); document.activeElement.blur(); renderCfg(); app.renderAll(); return; } const b = e.target.closest('[data-gm]'); if (!b) return; app.setCfg({ goalMode: b.dataset.gm }); document.activeElement.blur(); renderCfg(); app.renderAll(); });
 $('cfgc').addEventListener('change', e => {
+  if (e.target.id === 'c_shipOn' || e.target.id === 'c_dropOn') { app.setCfg({ [e.target.id.slice(2)]: e.target.checked }); app.toast(t('Réglage enregistré')); app.renderAll(); return; }
+  if (/^c_sh_/.test(e.target.id)) { const kg = e.target.id.slice(5), car = app.cfg.shipCar || 'mr', v = num(e.target.value), T = Object.assign({}, app.cfg.shipT), o = Object.assign({}, T[car]); o[kg] = isNaN(v) || v < 0 ? '' : v; T[car] = o; app.setCfg({ shipT: T }); app.toast(t('Réglage enregistré')); app.renderAll(); return; }
   if (e.target.id === 'c_pf1' || e.target.id === 'c_pf2') { app.setCfg({ [e.target.id.slice(2)]: e.target.value.trim().slice(0, 24) }); app.toast(t('Réglage enregistré')); app.renderAll(); return; }
-  const map = { c_goal: 'goal', c_goalCA: 'goalCA', c_goalY: 'goalY', c_goalYCA: 'goalYCA', c_emb: 'emb', c_port: 'port', c_comV: 'comV', c_comT: 'comT', c_roi: 'roi', c_minM: 'minM' }, k = map[e.target.id];
+  const map = { c_goal: 'goal', c_goalCA: 'goalCA', c_goalY: 'goalY', c_goalYCA: 'goalYCA', c_emb: 'emb', c_port: 'port', c_comV: 'comV', c_comT: 'comT', c_roi: 'roi', c_minM: 'minM', c_dropDays: 'dropDays', c_dropPct: 'dropPct', c_margeAlert: 'margeAlert' }, k = map[e.target.id];
   if (!k) return;
   const v = num(e.target.value);
   app.setCfg({ [k]: isNaN(v) || v < 0 ? 0 : v });
