@@ -15,7 +15,7 @@ const swPrecache = () => ({
     const dist = 'dist';
     if (!fs.existsSync(path.join(dist, 'sw.js'))) return;
     /* le code Sentry (assets/sentry-*.js) n'est pas gardé d'avance : il n'est utile que si un DSN est renseigné, il sera mis en cache à la première utilisation */
-    const files = walk(dist).filter(f => f !== 'sw.js' && !f.endsWith('.map') && !/^assets\/sentry-/.test(f)).sort();
+    const files = walk(dist).filter(f => f !== 'sw.js' && !f.endsWith('.map') && !/^assets\/sentry-/.test(f) && !/^presentation/.test(f)).sort();
     const h = createHash('sha1');
     files.forEach(f => h.update(f).update(fs.readFileSync(path.join(dist, f))));
     const version = `stock-v${pkg.version}-${h.digest('hex').slice(0, 8)}`;
