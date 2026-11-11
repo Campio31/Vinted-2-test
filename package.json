@@ -1,7 +1,7 @@
 {
   "name": "max",
   "private": true,
-  "version": "54.0.0",
+  "version": "55.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -12,7 +12,8 @@
     "check": "npm run lint && npm run test && npm run build"
   },
   "dependencies": {
-    "@sentry/browser": "^11.10.0"
+    "@sentry/browser": "^11.10.0",
+    "three": "0.170.0"
   },
   "devDependencies": {
     "@sentry/vite-plugin": "^11.10.0",
