@@ -23,7 +23,7 @@ Un seul écran, 3 onglets.
   Points : publier une pièce 1, vendre une pièce 3, préparer un colis 1, réussir un défi 5. Les pièces d'exemple ne comptent pas.
   Le niveau est **calculé** à partir de ce que tu as déjà fait : rien n'est stocké, il est identique sur tous tes appareils. Un message te félicite quand tu montes de niveau.
 * **Série de publication** : comme avant.
-* **Défi du mois** : s'il n'y en a pas, Max en propose un d'après le mois dernier (un peu plus de ventes ou de publications ; sinon « publier 30 pièces »). Un geste pour l'accepter. Tu peux aussi en créer d'autres.
+* **Défi du mois** : s'il n'y en a pas, Syno en propose un d'après le mois dernier (un peu plus de ventes ou de publications ; sinon « publier 30 pièces »). Un geste pour l'accepter. Tu peux aussi en créer d'autres.
 * **Carnet de médailles** : 12 cases par an, une médaille pour chaque mois où un défi est réussi.
 
 **Trophées** : record de CA mensuel et badges (inchangés).

@@ -1,6 +1,6 @@
 # Réglages fiscaux par questionnaire (v33)
 
-La Ligne fiscale ne laisse plus saisir plafond, seuil de TVA ni taux : Max les déduit de tes réponses (`src/modules/fiscal-rules.js`).
+La Ligne fiscale ne laisse plus saisir plafond, seuil de TVA ni taux : Syno les déduit de tes réponses (`src/modules/fiscal-rules.js`).
 
 | Réponse | Effet |
 |---|---|

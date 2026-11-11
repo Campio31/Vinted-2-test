@@ -28,7 +28,7 @@ create table if not exists public.push_queue (
   user_id uuid        not null default auth.uid() references auth.users(id) on delete cascade,
   tag     text        not null,
   send_at timestamptz not null,
-  title   text        not null default 'Max',
+  title   text        not null default 'Syno',
   body    text        not null,
   sent    boolean     not null default false,
   primary key (user_id, tag)
@@ -53,7 +53,7 @@ begin
    where user_id = auth.uid() and not sent and tag not like 'test:%'
      and tag not in (select x->>'tag' from jsonb_array_elements(items) x);
   insert into push_queue (user_id, tag, send_at, title, body)
-  select auth.uid(), x->>'tag', (x->>'send_at')::timestamptz, coalesce(x->>'title', 'Max'), x->>'body'
+  select auth.uid(), x->>'tag', (x->>'send_at')::timestamptz, coalesce(x->>'title', 'Syno'), x->>'body'
     from jsonb_array_elements(items) x
   on conflict (user_id, tag) do update
     set send_at = excluded.send_at, title = excluded.title, body = excluded.body

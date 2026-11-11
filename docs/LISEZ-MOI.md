@@ -1,4 +1,4 @@
-# Max
+# Syno
 
 Application web installable (téléphone et PC) pour suivre le stock et les ventes : ajout de pièces avec photo, passage en vendu, retours, bilan, export Excel, sauvegarde JSON. Elle fonctionne aussi sans connexion une fois installée.
 

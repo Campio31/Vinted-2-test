@@ -1,9 +1,9 @@
 # Pages légales, compte et suppression
 
 ## Ce qui est en place
-* `public/confidentialite.html` et `public/conditions.html` : deux pages publiques, liées depuis l'écran de connexion (« En créant un compte, tu acceptes… ») et depuis **Réglages, À propos de Max**.
+* `public/confidentialite.html` et `public/conditions.html` : deux pages publiques, liées depuis l'écran de connexion (« En créant un compte, tu acceptes… ») et depuis **Réglages, À propos de Syno**.
 * **Réglages, Mon compte et mes données** : exporter toutes les données, supprimer le compte (avec confirmation par la saisie de « SUPPRIMER »), ou effacer les données de l'appareil si aucun compte n'est connecté.
-* **Réglages, À propos de Max** : version, contact, liens légaux.
+* **Réglages, À propos de Syno** : version, contact, liens légaux.
 
 ## Ce qu'il faut faire avant d'ouvrir au grand public
 

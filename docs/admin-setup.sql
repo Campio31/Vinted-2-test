@@ -1,7 +1,7 @@
--- Page d'administration de Max : à coller dans Supabase (SQL Editor) puis « Run ».
+-- Page d'administration de Syno : à coller dans Supabase (SQL Editor) puis « Run ».
 -- Sans danger si tu le lances deux fois.
 --
--- AVANT DE LANCER : remplace TON_EMAIL@exemple.com (tout en bas) par l'e-mail de ton compte Max.
+-- AVANT DE LANCER : remplace TON_EMAIL@exemple.com (tout en bas) par l'e-mail de ton compte Syno.
 
 -- 1) Mesures d'usage : uniquement des COMPTEURS par compte, par jour et par nom d'écran ou d'outil.
 --    Jamais le contenu du stock, des ventes, des pseudos ou des prix.
@@ -90,7 +90,7 @@ grant execute on function public.track_usage(jsonb) to authenticated;
 grant execute on function public.admin_stats()     to authenticated;
 
 -- 7) TOI, administrateur. Remplace l'e-mail, puis lance. Si « 0 rows » s'affiche, l'e-mail ne correspond à aucun compte :
---    crée d'abord ton compte dans Max avec cet e-mail.
+--    crée d'abord ton compte dans Syno avec cet e-mail.
 insert into public.app_admins (user_id)
 select id from auth.users where lower(email) = lower('thomasxavierdurand@gmail.com')
 on conflict do nothing;

@@ -19,4 +19,4 @@ Un **compte** est un endroit où tu vends (« Vinted pro », « Vinted perso »,
 - Le Bilan, les objectifs et le Wrapped comptent **toutes** les ventes ; le filtre par compte du Bilan et de l'onglet Vente sert à comparer.
 
 ## À vérifier
-Ce qui doit être déclaré dépend de ta situation : revendre des pièces achetées pour la revente peut relever d'une activité professionnelle même depuis un compte particulier. Max te laisse choisir, il ne décide pas. Vérifie sur autoentrepreneur.urssaf.fr ou auprès d'un comptable.
+Ce qui doit être déclaré dépend de ta situation : revendre des pièces achetées pour la revente peut relever d'une activité professionnelle même depuis un compte particulier. Syno te laisse choisir, il ne décide pas. Vérifie sur autoentrepreneur.urssaf.fr ou auprès d'un comptable.

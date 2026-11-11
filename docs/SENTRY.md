@@ -22,7 +22,7 @@ Envoie le fichier sur GitHub. Le DSN n'est pas un secret : il sert seulement à 
 
 ## 3. Vérifier que ça marche
 
-Ouvre l'appli avec `#test-sentry` à la fin de l'adresse (`https://campio31.github.io/Vinted-2/#test-sentry`). Une erreur « Test Sentry depuis Max » doit apparaître dans **Issues** en moins d'une minute.
+Ouvre l'appli avec `#test-sentry` à la fin de l'adresse (`https://campio31.github.io/Vinted-2/#test-sentry`). Une erreur « Test Sentry depuis Syno » doit apparaître dans **Issues** en moins d'une minute.
 
 ## 4. Recevoir un e-mail
 

@@ -14,7 +14,7 @@ Le mode test se déclenche tout seul quand l'adresse se termine par **`-test`**.
 
 * Les **données du navigateur sont séparées** : le stock, les réglages et la connexion du site test ne se mélangent pas avec ceux du site publié, même sur le même téléphone.
 * Le **serveur de la version publiée est coupé** : pas de synchronisation Supabase, pas d'envoi d'erreurs à Sentry, pas de notifications push. Le site test fonctionne donc en local, sans compte, et ne peut pas abîmer les vraies données.
-* Un bandeau jaune **VERSION TEST** est affiché en haut, et l'appli s'installe sous le nom **Max TEST** (tu peux avoir les deux icônes sur ton téléphone).
+* Un bandeau jaune **VERSION TEST** est affiché en haut, et l'appli s'installe sous le nom **Syno TEST** (tu peux avoir les deux icônes sur ton téléphone).
 * Le site publié n'est pas touché : `public/env.js` ne fait rien chez lui.
 
 Tu peux quand même essayer la synchronisation sur le site test avec **un projet Supabase de test** (jamais le vrai) : dans le `config.js` du dépôt de test, ajoute

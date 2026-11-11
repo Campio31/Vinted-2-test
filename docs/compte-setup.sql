@@ -2,7 +2,7 @@
 -- À coller dans Supabase (SQL Editor) puis « Run ». Sans danger si tu le lances deux fois.
 --
 -- Ce que fait la fonction, pour la personne connectée UNIQUEMENT :
---   1. supprime ses lignes dans chaque table de Max (pièces, mesures d'usage, notifications, classement) ;
+--   1. supprime ses lignes dans chaque table de Syno (pièces, mesures d'usage, notifications, classement) ;
 --   2. supprime son compte (auth.users).
 -- Ses photos sont supprimées par l'appli avant l'appel (l'API de stockage de Supabase est la bonne méthode pour supprimer des fichiers) ;
 -- par sécurité, les lignes de stockage qui resteraient sont aussi retirées ici.

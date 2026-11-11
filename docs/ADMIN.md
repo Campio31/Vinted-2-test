@@ -9,13 +9,13 @@ Adresse : `https://campio31.github.io/Vinted-2/admin.html` (ou l'adresse de ta v
 | Inscrits, confirmés, nouveaux sur 7 et 30 jours, courbe des inscriptions | les comptes Supabase (chiffres exacts, dès le premier jour) |
 | Actifs aujourd'hui / 7 jours / 30 jours, courbe, fidélité jour/mois | un compte est « actif » le jour où il ouvre l'appli (mesure démarrée à la mise en place) |
 | Fonctions les plus utilisées (30 jours) | écrans et outils ouverts, avec le nombre d'utilisations et de personnes différentes |
-| Revenus mensuels (MRR), désabonnements | **pas branchés** : Max n'a pas de paiement en ligne. Ils s'afficheront quand on ajoutera Stripe |
+| Revenus mensuels (MRR), désabonnements | **pas branchés** : Syno n'a pas de paiement en ligne. Ils s'afficheront quand on ajoutera Stripe |
 
 ## Mise en place (une seule fois)
 
-1. Ouvre `docs/admin-setup.sql` dans un éditeur de texte. Tout en bas, remplace `TON_EMAIL@exemple.com` par l'e-mail avec lequel tu te connectes à Max (ton compte doit exister).
+1. Ouvre `docs/admin-setup.sql` dans un éditeur de texte. Tout en bas, remplace `TON_EMAIL@exemple.com` par l'e-mail avec lequel tu te connectes à Syno (ton compte doit exister).
 2. Dans Supabase : **SQL Editor, New query**, colle tout le fichier, clique sur **Run**. Tu dois voir « Success ». Tu peux le relancer sans risque.
-3. Publie la nouvelle version de Max sur GitHub (guide `PUBLIER.md`). Elle contient la page admin et l'envoi des mesures.
+3. Publie la nouvelle version de Syno sur GitHub (guide `PUBLIER.md`). Elle contient la page admin et l'envoi des mesures.
 4. Ouvre `…/admin.html`, connecte-toi avec ton e-mail et ton mot de passe.
 
 Si la page dit « Accès refusé », l'e-mail du script ne correspond pas à ton compte : corrige l'e-mail et relance l'étape 2. Si elle dit « Le script n'a pas encore été lancé », reprends l'étape 2.
