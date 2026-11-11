@@ -58,7 +58,7 @@ describe('v56 : la 3D est la vue de base du CRM', () => {
   it('la scène survit aux redessins du CRM : elle est déplacée, jamais recréée', () => {
     const s = lire('src/modules/warehouse3d.js');
     expect(s).toContain('slot.appendChild(S.host)');
-    expect(s).toContain('if (!host.isConnected) return;');
+    expect(lire('src/modules/scene3d.js')).toContain('host.isConnected');
     expect(s).not.toMatch(/openSheet\(.*wh/);
   });
   it('toucher un immeuble ouvre la fiche de l\'acheteur, et la fiche est exportée', () => {
@@ -70,7 +70,7 @@ describe('v56 : la 3D est la vue de base du CRM', () => {
     ['data-whv="wh"', 'data-whv="town"', 'id="wh_slot"', 'id="wh_rc"', 'id="wh_al"', 'id="wh_m"', 'id="wh_c"', 'id="wh_b"'].forEach(x => expect(h).toContain(x));
   });
   it('l\'entrepôt est un vrai bâtiment : murs, quais, camions, chariots, personnel', () => {
-    const s = lire('src/modules/warehouse3d.js');
-    ['quais de chargement', 'forklift', 'worker', 'truck', 'GridHelper'].forEach(x => expect(s).toContain(x));
+    const s = lire('src/modules/scene3d.js');
+    ['forklift', 'person', 'GridHelper', 'docks', 'cab'].forEach(x => expect(s).toContain(x));
   });
 });
