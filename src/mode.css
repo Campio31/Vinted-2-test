@@ -539,7 +539,22 @@ button.bkt{cursor:pointer}
 .cxm{flex:none;width:34px;height:34px;border:0;border-radius:50%;background:var(--soft);color:var(--ink);font-size:18px;cursor:pointer}
 .cxv{padding:14px 6px;text-align:center;font-size:12px;color:var(--mute)}
 .cxct .cxr{color:var(--red);font-weight:700}
-@media(min-width:900px){.cxp{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));overflow:visible}.cxcol{flex:none;max-width:none}.cxks{grid-template-columns:repeat(4,minmax(0,1fr))}}
+.cxwarn{color:var(--red)!important;font-weight:700}
+.cxh2{display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--soft);font-size:13px}.cxh2:last-child{border-bottom:0}
+.cxset{display:flex;align-items:center;gap:10px;margin-bottom:8px}.cxset>input[type=text]{flex:1;min-width:0}
+.cxtb{margin:0 0 10px}
+.cxbar{background:var(--soft);border-radius:14px;padding:10px 12px;margin-bottom:10px;display:flex;flex-direction:column;gap:8px}
+.cxbar .l{margin:0}
+.cxc{position:relative;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+.cxc.sel{outline:2px solid var(--acc)}
+.cxck{flex:none;width:22px;height:22px;border-radius:50%;border:2px solid var(--mute);display:grid;place-items:center;font-size:13px;font-weight:700;color:var(--acc)}
+.cxc.sel .cxck{border-color:var(--acc)}
+.cxlift{opacity:.35}
+.cxghost{position:fixed;z-index:9999;pointer-events:none;box-shadow:0 12px 30px rgba(0,0,0,.28);opacity:.95;transform:rotate(2deg)}
+.cxcol.over{outline:2px dashed var(--acc);outline-offset:-2px}
+.cxrow{position:relative}.cxrow .cxcp{margin:4px 0 8px}
+.cxdup{margin-bottom:10px}
+@media(min-width:900px){.cxp{display:grid;grid-template-columns:repeat(var(--cols,6),minmax(0,1fr));overflow:visible}.cxcol{flex:none;max-width:none}.cxks{grid-template-columns:repeat(4,minmax(0,1fr))}}
 /* Tutoriel : visite guidée */
 #tour{position:fixed;inset:0;z-index:20000;pointer-events:none}
 #tour[hidden]{display:none}
