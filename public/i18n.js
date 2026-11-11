@@ -2807,3 +2807,9 @@ K('Étagères : tes bacs. Zones au sol : les étapes de la vente. Touche un coli
 K('La 3D n\'a pas pu se charger : vérifie ta connexion puis réessaie.','3D could not load: check your connection and try again.','Il 3D non si è caricato: controlla la connessione e riprova.','El 3D no se pudo cargar: comprueba tu conexión y vuelve a intentarlo.','3D konnte nicht geladen werden: Prüfe deine Verbindung und versuche es erneut.');
 K('{n} pièce(s) demandent ton attention (pins rouges).','{n} item(s) need your attention (red pins).','{n} capo/i richiedono la tua attenzione (pin rossi).','{n} prenda(s) requieren tu atención (pins rojos).','{n} Teil(e) brauchen deine Aufmerksamkeit (rote Pins).');
 K('{n} pièce(s) : {z}','{n} item(s): {z}','{n} capo/i: {z}','{n} prenda(s): {z}','{n} Teil(e): {z}');
+K('Entrepôt','Warehouse','Magazzino','Almacén','Lager');
+K('Quartier des acheteurs','Buyers\' district','Quartiere degli acquirenti','Barrio de compradores','Käuferviertel');
+K('{n} acheteurs affichés sur {m}','{n} buyers shown out of {m}','{n} acquirenti mostrati su {m}','{n} compradores mostrados de {m}','{n} Käufer angezeigt von {m}');
+K('Voir le pipeline','View the pipeline','Vedi la pipeline','Ver el pipeline','Pipeline ansehen');
+K('Un immeuble par acheteur : plus il achète, plus il est haut. Touche un immeuble pour ouvrir sa fiche.','One building per buyer: the more they buy, the taller it is. Tap a building to open their profile.','Un edificio per acquirente: più acquista, più è alto. Tocca un edificio per aprire la scheda.','Un edificio por comprador: cuanto más compra, más alto es. Toca un edificio para abrir su ficha.','Ein Gebäude pro Käufer: je mehr er kauft, desto höher. Tippe auf ein Gebäude, um sein Profil zu öffnen.');
+K('3D','3D','3D','3D','3D');
