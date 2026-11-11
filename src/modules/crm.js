@@ -283,7 +283,7 @@ function openMove(id) {
 }
 
 /* ---- fiche d'un acheteur ---- */
-function openContact(k) {
+export function openContact(k) {
   const c = contacts().find(x => x.k === k); if (!c) return;
   const td = today(), sc = c.score, panier = c.n ? c.ca / c.n : 0, kind = c.rt && TPL[c.rt] ? c.rt : c.offres.length ? 'offre' : 'relance';
   const others = contacts().filter(x => x.k !== k), alias = Object.keys(CRM().al || {}).filter(x => CRM().al[x] === k);
@@ -353,7 +353,9 @@ function openCrmSettings() {
 }
 
 /* ---- écran ---- */
-let sub = LSg('crmSub', 'pipe');
+let sub = LSg('crmSub', '3d');
+if (!LSg('crm3d1', 0)) { LSs('crm3d1', 1); if (sub === 'pipe') { sub = '3d'; LSs('crmSub', '3d'); } }   /* la vue 3D est la vue de base : on y bascule une fois pour tout le monde */
+const gl3 = () => !!(app.whCan && app.whCan());
 let query = '', tagF = '', selMode = false;
 const sel = new Set();
 const card = p => {
@@ -412,15 +414,17 @@ function tilesHTML() {
 function draw() {
   const box = $('crm'); if (!box || box.hidden) return;
   if (!selMode) sel.clear();
+  const cur = sub === '3d' && !gl3() ? 'pipe' : sub;
   box.innerHTML = `<div class="cxh"><span class="tag x">${t('Test')}</span><span class="hint" style="margin:0">${t('Le stock vu comme un CRM : fais avancer tes pièces et suis tes acheteurs.')}</span></div>${tilesHTML()}
-   <div class="chips" style="margin:0 0 12px">${[['pipe', 'Pipeline'], ['buyers', 'Acheteurs'], ['log', 'Activité'], ['stats', 'Chiffres']].map(([k, l]) => `<button type="button" class="chip sm${sub === k ? ' on' : ''}" data-crs="${k}">${t(l)}</button>`).join('')}</div>
-   ${sub === 'pipe' ? toolbarHTML() + bulkHTML() + pipelineHTML() : sub === 'buyers' ? buyersHTML() : sub === 'log' ? activityHTML() : statsHTML()}`;
+   <div class="chips" style="margin:0 0 12px">${[...(gl3() ? [['3d', '3D']] : []), ['pipe', 'Pipeline'], ['buyers', 'Acheteurs'], ['log', 'Activité'], ['stats', 'Chiffres']].map(([k, l]) => `<button type="button" class="chip sm${cur === k ? ' on' : ''}" data-crs="${k}">${t(l)}</button>`).join('')}</div>
+   ${cur === '3d' ? app.whPanel() : cur === 'pipe' ? toolbarHTML() + bulkHTML() + pipelineHTML() : cur === 'buyers' ? buyersHTML() : cur === 'log' ? activityHTML() : statsHTML()}`;
+  if (cur === '3d') app.whMount($('wh_slot'));
   hydrate();
 }
 export const crmDraw = draw;
 /** Ouvre directement un sous-écran du CRM : 'pipe', 'buyers', 'log' ou 'stats'. */
-export function crmSub(k) { sub = ['pipe', 'buyers', 'log', 'stats'].includes(k) ? k : 'pipe'; LSs('crmSub', sub); draw(); }
-app.crmSub = crmSub;
+export function crmSub(k) { sub = ['3d', 'pipe', 'buyers', 'log', 'stats'].includes(k) ? k : 'pipe'; LSs('crmSub', sub); draw(); }
+app.crmSub = crmSub; app.openContact = openContact;
 let mode = LSg('stkMode', 'stock');
 function applyMode() {
   const crm = $('crm'); if (!crm) return;
@@ -456,7 +460,7 @@ host.addEventListener('click', e => {
   if (g) { const k = g.dataset.crg; sub = k === 'buyers' ? 'buyers' : 'pipe'; LSs('crmSub', sub); draw(); if (k !== 'buyers') { const c = document.querySelector(`#crm [data-stage="${k}"]`); if (c) c.scrollIntoView({ block: 'nearest', inline: 'start', behavior: 'smooth' }); } return; }
   if (e.target.closest('[data-cxsel]')) { selMode = !selMode; sel.clear(); return draw(); }
   if (e.target.closest('[data-cxset]')) return openCrmSettings();
-  if (e.target.closest('[data-cxwh]')) return app.openWarehouse && app.openWarehouse();
+  if (e.target.closest('[data-cxwh]')) { if (gl3()) return crmSub('3d'); return app.toast(t('La 3D n\'est pas disponible sur cet appareil.')); }
   if (e.target.closest('[data-cxexp]')) { putBackExpired(); return draw(); }
   const to = e.target.closest('[data-cxto]'); if (to) return bulkMove(to.dataset.cxto);
   if (e.target.closest('[data-cxlot]')) { const ids = [...sel]; selMode = false; sel.clear(); draw(); return openGroupSale(ids); }
