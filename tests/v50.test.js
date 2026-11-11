@@ -11,7 +11,7 @@ function faux(path, cfg) {
   const ouverts = [];
   class IDBFactory { open(n, v) { ouverts.push([n, v]); return {}; } deleteDatabase(n) { ouverts.push(['del', n]); return {}; } }
   const els = [];
-  const document = { readyState: 'complete', title: 'Max', documentElement: { dataset: {} }, head: { appendChild: e => els.push(e) }, body: { appendChild: e => els.push(e) }, createElement: t => ({ tag: t, setAttribute() {}, id: '', textContent: '' }), querySelector: () => null, addEventListener() {} };
+  const document = { readyState: 'complete', title: 'Syno', documentElement: { dataset: {} }, head: { appendChild: e => els.push(e) }, body: { appendChild: e => els.push(e) }, createElement: t => ({ tag: t, setAttribute() {}, id: '', textContent: '' }), querySelector: () => null, addEventListener() {} };
   const w = { location: { pathname: path, href: 'https://x.github.io' + path }, STOCK_CONFIG: cfg, Storage, IDBFactory, localStorage: new Storage(), sessionStorage: new Storage(), indexedDB: new IDBFactory(), document };
   new Function('window', code.replace('window.stockEnvInit(window);', '').replace('window.stockEnvInit = function', 'window.stockEnvInit = function'))(w);
   return { w, ouverts, els };
@@ -67,7 +67,7 @@ describe('version test', () => {
     const { w, els } = faux('/', c);
     expect(w.stockEnvInit(w)).toBe('test');
     expect(els.some(e => e.id === 'envb' && /TEST/.test(e.textContent))).toBe(true);
-    expect(w.document.title).toBe('Max TEST');
+    expect(w.document.title).toBe('Syno TEST');
   });
   it('index.html charge env.js juste après config.js, et le service worker a un cache par site', () => {
     const html = lire('index.html');

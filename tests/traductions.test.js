@@ -69,7 +69,7 @@ describe('traductions : aucun texte oublié', () => {
     if (OUT) fs.writeFileSync(OUT, JSON.stringify(miss, null, 1), 'utf8');
     /* l'historique des nouveautés et les réponses de l'aide sont longs : ils restent en français pour l'instant */
     const { CHANGELOG, FAQ } = await import('../src/modules/help-news.js');
-    const permis = new Set(['Vinted', 'TikTok Live', 'Vinted et lives', 'max']);
+    const permis = new Set(['Vinted', 'TikTok Live', 'Vinted et lives', 'max', 'syno']);
     CHANGELOG.forEach(c => c.t.forEach(x => permis.add(x)));
     FAQ.forEach(([q, r]) => { permis.add(q); permis.add(r); });
     const manquants = miss.filter(k => !permis.has(k) && !k.startsWith('{"pieces"'));

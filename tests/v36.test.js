@@ -17,7 +17,7 @@ afterEach(() => { app.setCfg({ rules: {}, ruleSnooze: {}, apLog: [], apStats: { 
 const base = () => app.P.find(p => p.statut === 'Disponible');
 const mk = (id, o) => { const p = Object.assign({}, base(), { id }, o); app.P.push(p); return p; };
 
-describe('Règles de Max : définition et réglages', () => {
+describe('Règles de Syno : définition et réglages', () => {
   it('neuf règles prêtes, toutes actives au départ, réglables dans Réglages', async () => {
     expect(A.RULES).toHaveLength(9);
     expect(A.RULES.every(r => A.ruleOn(r.id))).toBe(true);
@@ -38,7 +38,7 @@ describe('Règles de Max : définition et réglages', () => {
   });
 });
 
-describe('Règles de Max : effet sur « Ma journée »', () => {
+describe('Règles de Syno : effet sur « Ma journée »', () => {
   it('une règle coupée fait disparaître sa tâche', () => {
     mk('ru-1', { statut: 'Disponible', pub: undefined });
     expect(A.tasksToday().some(x => x.id === 'pub')).toBe(true);

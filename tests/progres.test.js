@@ -165,7 +165,7 @@ describe('Défis, cartes, trophées et classement : un seul écran', () => {
   it('le logo, les huit dos et les trois packs fournis sont utilisés, avec des identifiants propres à chaque affichage', async () => {
     const A = await import('../src/modules/cartes-art.js');
     expect(A.SHEEP).toContain('class="cgl"');
-    expect(A.SHEEP).toContain('Logo Max');
+    expect(A.SHEEP).toContain('Logo Syno');
     for (let r = 0; r <= 6; r++) { const b = A.backSVG(r, 'x' + r); expect(b, 'dos ' + r).toContain('class="cgbk"'); expect(b).toContain('viewBox="0 0 352 496"'); }
     expect(A.backSVG(3, 'a', true)).not.toBe(A.backSVG(3, 'a', false));
     for (const k of ['s', 'p', 'a']) { const s = A.packSVG(k, 'p1'), s2 = A.packSVG(k, 'p2'); expect(s).toContain('class="pks"'); expect(s).toContain('viewBox="0 0 300 500"'); expect(s).not.toBe(s2); const ids = [...s.matchAll(/\sid="([^"]+)"/g)].map(m => m[1]); ids.forEach(i => { expect(i.endsWith('-p1')).toBe(true); expect(s).not.toContain('url(#' + i.replace(/-p1$/, '') + ')'); }); }
