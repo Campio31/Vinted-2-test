@@ -15,7 +15,7 @@ const swPrecache = () => ({
     const dist = 'dist';
     if (!fs.existsSync(path.join(dist, 'sw.js'))) return;
     /* le code Sentry (assets/sentry-*.js) et Three.js (assets/three-*.js, entrepôt 3D) ne sont pas gardés d'avance : ils se mettent en cache à la première utilisation */
-    const files = walk(dist).filter(f => f !== 'sw.js' && !f.endsWith('.map') && !/^assets\/(sentry|three)-/.test(f) && !/^presentation/.test(f)).sort();
+    const files = walk(dist).filter(f => f !== 'sw.js' && !f.endsWith('.map') && !/^assets\/(sentry|three)-/.test(f) && !/^models\//.test(f) && !/^presentation/.test(f)).sort();
     const h = createHash('sha1');
     files.forEach(f => h.update(f).update(fs.readFileSync(path.join(dist, f))));
     const version = `stock-v${pkg.version}-${h.digest('hex').slice(0, 8)}`;
