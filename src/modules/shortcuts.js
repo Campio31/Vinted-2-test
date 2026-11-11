@@ -26,7 +26,7 @@ document.addEventListener('keydown',e=>{
  if(!$('auth').hidden||!$('scan').hidden)return;const k=e.key,lk=k.length===1?k.toLowerCase():k,sheetOpen=!$('sheet').hidden;
  if(sheetOpen)return;
  const go1={n:'add',s:'list',l:'quick',b:'dash',r:'set'}[lk];if(go1){e.preventDefault();go(go1);return}
- if(k==='/'){e.preventDefault();go('list');setTimeout(()=>$('q').focus(),30);return}
+ if(k==='/'){e.preventDefault();go('list');setTimeout(()=>$('q')?.focus(),30);return}
  if(lk==='o'){e.preventDefault();openTools();return}if(lk==='m'){e.preventDefault();openVoice();return}if(lk==='c'){e.preventDefault();openComplete();return}if(k==='?'){e.preventDefault();openHelp();return}
  if(app.view==='list'){const id=idOf(document.activeElement)||hoverId;if(!id)return;const p=app.P.find(x=>x.id===id);if(!p)return;
   if(lk==='v'&&avail(p)){e.preventDefault();sellFromCard(id)}else if(lk==='p'){e.preventDefault();markPublished(p)}else if(k==='Enter'&&!/BUTTON/.test(t.tagName)){e.preventDefault();app.openSheet(id)}}});
