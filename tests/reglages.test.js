@@ -47,7 +47,7 @@ describe('plateformes au choix', () => {
     const txt = $('cfgc').textContent;
     expect(txt).toContain(t('Plateforme {n}', { n: 1 }));
     expect(txt).toContain(t('Plateforme {n}', { n: 2 }));
-    expect(txt).not.toMatch(/Vinted|TikTok/);
+    expect(txt.replace(/Vinted Go/g, '')).not.toMatch(/Vinted|TikTok/);   /* « Vinted Go » est un transporteur, pas une plateforme de vente */
     expect($('lgc').textContent).not.toMatch(/Vinted/);
   });
 

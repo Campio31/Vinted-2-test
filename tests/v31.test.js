@@ -98,10 +98,10 @@ describe('Réglages : cartes repliées, objectifs et export fusionnés', () => {
     expect($('xic').querySelectorAll('h3').length).toBe(1);
   });
 
-  it('Objectifs et coûts : quatre blocs, mêmes champs, frais d\'exemple', () => {
+  it('Objectifs et coûts : six blocs, mêmes champs, frais d\'exemple', () => {
     app.setCfg({ emb: 0.5, port: 0, comV: 10, pf1: '', pf2: '' });
     nav.go('set'); app.renderSet();
-    expect($('cfgc').querySelectorAll('.cg').length).toBe(4);
+    expect($('cfgc').querySelectorAll('.cg').length).toBe(6);
     for (const id of ['c_goal', 'c_goalY', 'c_emb', 'c_port', 'c_pf1', 'c_pf2', 'c_comV', 'c_comT', 'c_roi', 'c_minM']) expect($(id), id).toBeTruthy();
     expect($('cfgc').querySelector('.cprev').textContent).toMatch(/20/);
   });

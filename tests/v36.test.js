@@ -18,11 +18,11 @@ const base = () => app.P.find(p => p.statut === 'Disponible');
 const mk = (id, o) => { const p = Object.assign({}, base(), { id }, o); app.P.push(p); return p; };
 
 describe('Règles de Syno : définition et réglages', () => {
-  it('neuf règles prêtes, toutes actives au départ, réglables dans Réglages', async () => {
-    expect(A.RULES).toHaveLength(9);
+  it('treize règles prêtes, toutes actives au départ, réglables dans Réglages', async () => {
+    expect(A.RULES).toHaveLength(13);
     expect(A.RULES.every(r => A.ruleOn(r.id))).toBe(true);
     nav.go('set'); app.renderSet(); await tick(30);
-    expect($('rlc').querySelectorAll('[data-ru]')).toHaveLength(9);
+    expect($('rlc').querySelectorAll('[data-ru]')).toHaveLength(13);
     expect($('rlc').classList.contains('shut')).toBe(true);
     $('rlc').querySelector('[data-ru="colis"]').checked = false;
     $('rlc').querySelector('[data-ru="colis"]').dispatchEvent(new Event('change', { bubbles: true }));
