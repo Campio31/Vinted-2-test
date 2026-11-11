@@ -38,9 +38,9 @@ window.stockEnvInit = function (w) {
   else { C.supabaseUrl = ''; C.supabaseKey = ''; C.sentryDsn = ''; C.vapidPublicKey = ''; }
   var ui = function () {
     var d2 = w.document;
-    d2.title = 'Max TEST';
+    d2.title = 'Syno TEST';
     d2.documentElement.dataset.env = 'test';
-    var m = d2.querySelector('meta[name="apple-mobile-web-app-title"]'); if (m) m.setAttribute('content', 'Max TEST');
+    var m = d2.querySelector('meta[name="apple-mobile-web-app-title"]'); if (m) m.setAttribute('content', 'Syno TEST');
     var st = d2.createElement('style');
     st.textContent = '#envb{position:fixed;top:0;left:50%;transform:translateX(-50%);z-index:99999;background:#E0A526;color:#111;font:700 12px/1.4 system-ui,sans-serif;padding:1px 12px;border-radius:0 0 10px 10px;pointer-events:none;letter-spacing:.3px}';
     d2.head.appendChild(st);
@@ -50,7 +50,7 @@ window.stockEnvInit = function (w) {
       var l = d2.querySelector('link[rel="manifest"]');
       if (l) {
         var base = new URL('.', w.location.href).href;
-        var man = { name: 'Max TEST', short_name: 'Max TEST', lang: 'fr', start_url: base + 'index.html', scope: base, display: 'standalone', background_color: '#F1F2F4', theme_color: '#E0A526', icons: [{ src: base + 'icons/icon-192.png', sizes: '192x192', type: 'image/png' }, { src: base + 'icons/icon-512.png', sizes: '512x512', type: 'image/png' }] };
+        var man = { name: 'Syno TEST', short_name: 'Syno TEST', lang: 'fr', start_url: base + 'index.html', scope: base, display: 'standalone', background_color: '#F1F2F4', theme_color: '#E0A526', icons: [{ src: base + 'icons/icon-192.png', sizes: '192x192', type: 'image/png' }, { src: base + 'icons/icon-512.png', sizes: '512x512', type: 'image/png' }] };
         l.href = 'data:application/manifest+json,' + encodeURIComponent(JSON.stringify(man));
       }
     } catch (e) { /* manifeste d'origine */ }
