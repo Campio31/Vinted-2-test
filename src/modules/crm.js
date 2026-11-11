@@ -47,7 +47,7 @@ export function baseStage(p) {
 }
 export function stageOf(p) { const b = baseStage(p); return b && p.crmx && extraIds().includes(p.crmx) && b !== 'finalise' ? p.crmx : b; }
 const RECENT_FINAL = 30;
-const inPipeline = p => { const s = stageOf(p); return !!s && (s !== 'finalise' || (ok(p.dv) && days(p.dv, today()) <= RECENT_FINAL)); };
+export const inPipeline = p => { const s = stageOf(p); return !!s && (s !== 'finalise' || (ok(p.dv) && days(p.dv, today()) <= RECENT_FINAL)); };
 
 /* ---- délais réglables : relances, réservation, colis qui traîne ---- */
 export const cadence = () => { const c = CRM(); return { offre: c.dOffre >= 0 ? +c.dOffre : 2, avis: c.dAvis >= 0 ? +c.dAvis : 3, res: c.dRes > 0 ? +c.dRes : 2, slow: c.dSlow > 0 ? +c.dSlow : 7 }; };
@@ -373,7 +373,7 @@ function pipelineHTML() {
 }
 const toolbarHTML = () => {
   const nx = crmTodo().expirees.length;
-  return `<div class="chips cxtb"><button type="button" class="chip sm${selMode ? ' on' : ''}" data-cxsel="1">${t(selMode ? 'Terminer la sélection' : 'Sélectionner')}</button>${nx ? `<button type="button" class="chip sm" data-cxexp="1">${t('Remettre en ligne les expirées ({n})', { n: nx })}</button>` : ''}<button type="button" class="chip sm" data-cxset="1">${t('Réglages du CRM')}</button></div>`;
+  return `<div class="chips cxtb"><button type="button" class="chip sm${selMode ? ' on' : ''}" data-cxsel="1">${t(selMode ? 'Terminer la sélection' : 'Sélectionner')}</button>${nx ? `<button type="button" class="chip sm" data-cxexp="1">${t('Remettre en ligne les expirées ({n})', { n: nx })}</button>` : ''}<button type="button" class="chip sm" data-cxwh="1">${t('Entrepôt 3D')}</button><button type="button" class="chip sm" data-cxset="1">${t('Réglages du CRM')}</button></div>`;
 };
 const bulkHTML = () => {
   if (!selMode) return '';
@@ -456,6 +456,7 @@ host.addEventListener('click', e => {
   if (g) { const k = g.dataset.crg; sub = k === 'buyers' ? 'buyers' : 'pipe'; LSs('crmSub', sub); draw(); if (k !== 'buyers') { const c = document.querySelector(`#crm [data-stage="${k}"]`); if (c) c.scrollIntoView({ block: 'nearest', inline: 'start', behavior: 'smooth' }); } return; }
   if (e.target.closest('[data-cxsel]')) { selMode = !selMode; sel.clear(); return draw(); }
   if (e.target.closest('[data-cxset]')) return openCrmSettings();
+  if (e.target.closest('[data-cxwh]')) return app.openWarehouse && app.openWarehouse();
   if (e.target.closest('[data-cxexp]')) { putBackExpired(); return draw(); }
   const to = e.target.closest('[data-cxto]'); if (to) return bulkMove(to.dataset.cxto);
   if (e.target.closest('[data-cxlot]')) { const ids = [...sel]; selMode = false; sel.clear(); draw(); return openGroupSale(ids); }
