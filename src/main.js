@@ -64,6 +64,7 @@ import './modules/crm.js';
 import './modules/shipping.js';
 import './modules/photo-studio.js';
 import './modules/garment3d.js';
+import './modules/warehouse3d.js';
 import './modules/demo.js';
 import './modules/piece-extras.js';
 import './modules/analytics.js';
