@@ -62,7 +62,7 @@ export function tableau(s) {
 
 export function entete(s) {
   const when = s && s.generated ? new Date(s.generated).toLocaleString('fr-FR') : '';
-  return `<div class="bar"><div><h1>Administration de Max</h1><p class="sub">${when ? 'Chiffres du ' + esc(when) : ''}</p></div><div><button class="btn sec" id="rf" type="button">Actualiser</button> <button class="btn sec" id="so" type="button">Déconnexion</button></div></div>`;
+  return `<div class="bar"><div><h1>Administration de Syno</h1><p class="sub">${when ? 'Chiffres du ' + esc(when) : ''}</p></div><div><button class="btn sec" id="rf" type="button">Actualiser</button> <button class="btn sec" id="so" type="button">Déconnexion</button></div></div>`;
 }
 
 function init() {

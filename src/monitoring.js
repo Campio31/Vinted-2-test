@@ -40,7 +40,7 @@ export async function initMonitoring() {
     sentry = Sentry;
     waiting.splice(0).forEach(([e, ctx]) => report(e, ctx));
     /* Pour vérifier que tout est branché : ouvre l'appli avec #test-sentry à la fin de l'adresse. */
-    if (location.hash === '#test-sentry') setTimeout(() => { throw new Error('Test Sentry depuis Max : tout fonctionne'); }, 600);
+    if (location.hash === '#test-sentry') setTimeout(() => { throw new Error('Test Sentry depuis Syno : tout fonctionne'); }, 600);
   } catch (e) { /* le suivi ne doit jamais gêner l'appli */ }
 }
 
