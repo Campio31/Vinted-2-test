@@ -1,4 +1,4 @@
-﻿import { app } from '../state.js';
+import { app } from '../state.js';
 import { $, esc } from './core.js';
 import { tx } from './storage.js';
 import { VER } from './proofs.js';
@@ -28,10 +28,10 @@ export function renderAccount() {
 function renderAbout() {
   const c = $('abo'); if (!c) return;
   const mail = (window.STOCK_CONFIG || {}).feedbackEmail || '';
-  c.innerHTML = `<h3>${t('À propos de Max')}</h3>
+  c.innerHTML = `<h3>${t('À propos de Syno')}</h3>
    <div class="kv" style="grid-template-columns:auto 1fr"><dt>${t('Version')}</dt><dd>${esc(VER)} · ${esc(typeof __RELEASE__ === 'string' ? __RELEASE__ : '')}</dd><dt>${t('Contact')}</dt><dd>${mail ? `<a href="mailto:${esc(mail)}">${esc(mail)}</a>` : `<button type="button" class="lnk" id="ab_idee">${t('Écrire ou proposer une idée')}</button>`}</dd></div>
    <div class="acts two"><a class="btn sec" href="confidentialite.html" target="_blank" rel="noopener">${t('Confidentialité')}</a><a class="btn sec" href="conditions.html" target="_blank" rel="noopener">${t('Conditions d\'utilisation')}</a></div>
-   <p class="sub" style="margin-top:12px">${t('Les calculs fiscaux et de rentabilité de Max sont des estimations, pas un conseil fiscal ou comptable.')}</p>`;
+   <p class="sub" style="margin-top:12px">${t('Les calculs fiscaux et de rentabilité de Syno sont des estimations, pas un conseil fiscal ou comptable.')}</p>`;
 }
 
 async function removeCloudPhotos() {

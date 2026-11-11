@@ -10,7 +10,7 @@ app.tresoCardHTML = tresoCardHTML;
 app.openTreso = openTreso;
 
 /* --- trésorerie : calculée toute seule dans le Bilan --- */
-/* Sans solde de départ, Max part de ton premier achat : ce que ton activité a généré (ventes encaissées, moins achats et dépenses).
+/* Sans solde de départ, Syno part de ton premier achat : ce que ton activité a généré (ventes encaissées, moins achats et dépenses).
    Si tu indiques ton solde réel, le calcul repart de ce solde. */
 /* ballots achetés à la main : le coût sort de la trésorerie à sa date (à supprimer une fois les pièces ajoutées au stock, elles comptent alors par leur prix d'achat) */
 Object.assign(CFG0,{ballotsBought:[]});

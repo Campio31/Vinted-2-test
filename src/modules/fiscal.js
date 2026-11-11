@@ -108,7 +108,7 @@ const rulesRows = () => {
 /* ---- écrans ---- */
 function openFisc() {
   if (!app.cfg.fiscQ) {
-    showSheet(sheetHead(t('Ligne fiscale')) + `<div class="card"><h3>${t('Réglons ta situation')}</h3><p class="sub" style="margin:0 0 12px">${t('Quelques questions pour que Max applique les bonnes règles (plafond, TVA, cotisations). Tu peux les refaire à tout moment.')}</p><div class="acts"><button type="button" class="btn" id="fs_q">${t('Répondre aux questions')}</button></div></div>`);
+    showSheet(sheetHead(t('Ligne fiscale')) + `<div class="card"><h3>${t('Réglons ta situation')}</h3><p class="sub" style="margin:0 0 12px">${t('Quelques questions pour que Syno applique les bonnes règles (plafond, TVA, cotisations). Tu peux les refaire à tout moment.')}</p><div class="acts"><button type="button" class="btn" id="fs_q">${t('Répondre aux questions')}</button></div></div>`);
     $('fs_q').onclick = () => openFiscQ();
     return;
   }

@@ -8,7 +8,7 @@ function renderConfort() {
   c.innerHTML = `<h3>${t('Confort')}</h3><p class="sub">${t('Vibrations légères et mode une main. Ces choix sont propres à cet appareil.')}</p>
    <label class="chk cfr"><input type="checkbox" id="cc_o"${app.cfg.onehand ? ' checked' : ''}><span><b>${t('Mode une main')}</b><small>${t('Barre d\'actions en bas de l\'écran (chercher, sélection, planning, outils) et bouton Fermer en bas des fenêtres.')}</small></span></label>
    <label class="chk cfr"><input type="checkbox" id="cc_v"${app.cfg.vibr !== false ? ' checked' : ''}><span><b>${t('Vibrations légères')}</b><small>${t('À la validation d\'une vente et à la sélection. Fonctionne sur Android ; l\'iPhone ne les permet pas.')}</small></span></label>
-   <label class="chk cfr"><input type="checkbox" id="cc_s"${app.cfg.stats !== false ? ' checked' : ''}><span><b>${t('Mesures d\'usage anonymes')}</b><small>${t('Aide à améliorer Max : seuls des compteurs (écrans et outils ouverts, jours d\'utilisation) sont envoyés. Jamais ton stock, tes ventes, tes prix ni tes acheteurs. Décoche pour refuser.')}</small></span></label>`;
+   <label class="chk cfr"><input type="checkbox" id="cc_s"${app.cfg.stats !== false ? ' checked' : ''}><span><b>${t('Mesures d\'usage anonymes')}</b><small>${t('Aide à améliorer Syno : seuls des compteurs (écrans et outils ouverts, jours d\'utilisation) sont envoyés. Jamais ton stock, tes ventes, tes prix ni tes acheteurs. Décoche pour refuser.')}</small></span></label>`;
 }
 function renderHelp() {
   const c = $('hlp'); if (!c) return;

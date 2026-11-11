@@ -3,7 +3,7 @@ import { CFG0 } from './settings-core.js';
 import { addDays, today } from './core.js';
 
 /* ---------- règles fiscales, réglées par un questionnaire ---------- */
-/* L'utilisateur ne tape aucun chiffre : il répond à des questions (Ligne fiscale, Refaire le questionnaire) et Max en déduit
+/* L'utilisateur ne tape aucun chiffre : il répond à des questions (Ligne fiscale, Refaire le questionnaire) et Syno en déduit
    le plafond, le seuil de TVA, le taux de cotisations, le versement libératoire et la période de déclaration.
    Les chiffres ci-dessous sont ceux de la vente de marchandises en micro-entreprise pour 2026 : à vérifier chaque année sur autoentrepreneur.urssaf.fr. */
 export const RULES = {
@@ -55,7 +55,7 @@ export const fiscMode = () => (app.cfg.fiscQ || {}).statut || '';
 export function fiscSteps() {
   return [
     { k: 'statut', q: 'Tu vends en tant que…', h: 'Ça détermine les règles qui s\'appliquent à tes ventes.', type: 'choice', o: [['part', 'Particulier', 'Je vends mes affaires, sans statut d\'entreprise'], ['micro', 'Micro-entrepreneur', 'Auto-entrepreneur déclaré à l\'URSSAF'], ['autre', 'Autre statut', 'Société, entreprise individuelle au réel…']] },
-    { k: 'activite', q: 'Quelle est ton activité ?', h: 'Le plafond et les cotisations dépendent de l\'activité.', type: 'choice', show: a => a.statut === 'micro', o: [['march', 'Vente de marchandises', 'Je revends des pièces : le cas de Max'], ['mixte', 'Vente et prestations', 'Je vends aussi des services (Max ne suit que les ventes de pièces)']] },
+    { k: 'activite', q: 'Quelle est ton activité ?', h: 'Le plafond et les cotisations dépendent de l\'activité.', type: 'choice', show: a => a.statut === 'micro', o: [['march', 'Vente de marchandises', 'Je revends des pièces : le cas de Syno'], ['mixte', 'Vente et prestations', 'Je vends aussi des services (Syno ne suit que les ventes de pièces)']] },
     { k: 'creation', q: 'Quand as-tu créé ton activité ?', h: 'La première année, le plafond est réduit au prorata des jours. Sert aussi pour l\'ACRE.', type: 'date', show: a => a.statut === 'micro', need: a => !!a.creation, needMsg: 'Indique la date de création' },
     { k: 'acre', q: 'Bénéficies-tu de l\'ACRE ?', h: 'Réduction de cotisations la première année.', type: 'choice', show: a => a.statut === 'micro' && !!a.creation && a.creation >= addDays(today(), -365), o: [['oui', 'Oui', 'Mes cotisations sont réduites'], ['non', 'Non', '']] },
     { k: 'vl', q: 'Comment paies-tu l\'impôt sur le revenu ?', h: 'Le versement libératoire se paie avec les cotisations, en plus.', type: 'choice', show: a => a.statut === 'micro', o: [['bareme', 'Avec ma déclaration de revenus', 'Le cas général'], ['liberatoire', 'Versement libératoire', 'Un petit pourcentage du chiffre d\'affaires en plus des cotisations'], ['nsp', 'Je ne sais pas', 'On compte le cas général']] },

@@ -10,7 +10,7 @@ app.printHTML = printHTML;
 app.openProofs = openProofs;
 
 /* ===== v20 : preuves, visuels rÃ©seaux, calendrier, rappels, wrapped, dÃ©fis, import, aide, performances ===== */
-export const VER='v50';
+export const VER='v51';
 export const ldate=d=>d.getFullYear()+'-'+pad(d.getMonth()+1,2)+'-'+pad(d.getDate(),2);
 const fmtDT=t=>{const d=new Date(t);return fd(ldate(d))+' '+pad(d.getHours(),2)+':'+pad(d.getMinutes(),2)};
 export const fmtSize=b=>b>=1048576?(b/1048576).toFixed(1).replace('.',app.DS)+' '+t('Mo'):Math.max(1,Math.round(b/1024))+' '+t('Ko');
@@ -53,7 +53,7 @@ function openProofs(id){const p=app.P.find(x=>x.id===id);if(!p)return;const pr=p
 async function printProof(id){const p=app.P.find(x=>x.id===id),pr=p.pr||{},it=pr.i||[],rows=[];
  for(const x of it){let u='';if(x.k==='p'){const b=await phBlob(x.id);if(b)u=URL.createObjectURL(b)}rows.push({x,u})}
  const mark='<svg viewBox="0 0 104 104" width="34" height="34"><rect width="104" height="104" rx="22" fill="#111"/><rect x="12" y="68" width="80" height="18" rx="3" fill="#F1F2F4"/><rect x="18" y="46" width="68" height="18" rx="3" fill="#C9CBD0"/><rect x="32" y="14" width="58" height="18" rx="3" fill="#FF4A1C" transform="rotate(-12 62 24)"/></svg>';
- await app.printHTML(`<div class="rp"><div class="rph">${mark}<div><b>max</b><span>${t('Dossier de preuves')}</span></div><div class="rpm"><b>${esc(title(p))}</b><span>${t('Ã©ditÃ© le {d}',{d:fmtDT(Date.now())})}</span></div></div>
+ await app.printHTML(`<div class="rp"><div class="rph">${mark}<div><b>syno</b><span>${t('Dossier de preuves')}</span></div><div class="rpm"><b>${esc(title(p))}</b><span>${t('Ã©ditÃ© le {d}',{d:fmtDT(Date.now())})}</span></div></div>
   <h4>${t('Vente')}</h4><table class="rt"><tr><td>${t('PiÃ¨ce')}</td><td>${esc(title(p))}${p.code?' Â· '+esc(p.code):''}</td></tr><tr><td>${t('Acheteur')}</td><td>${p.acheteur?'@'+esc(p.acheteur):t('non renseignÃ©')}</td></tr><tr><td>${t('Plateforme')}</td><td>${esc(tv(p.canal||'Vinted'))}</td></tr><tr><td>${t('Prix')}</td><td>${eur(p.pv)}</td></tr><tr><td>${t('Date de vente')}</td><td>${ok(p.dv)?fd(p.dv):'â€”'}</td></tr><tr><td>${t('Poids du colis')}</td><td>${pr.w?String(pr.w).replace('.',app.DS)+' g':t('non renseignÃ©')}</td></tr>${pr.n?`<tr><td>${t('Note')}</td><td>${esc(pr.n)}</td></tr>`:''}</table>
   <h4>${t('Preuves horodatÃ©es')}</h4>${rows.map(({x,u})=>`<div class="pfp">${u?`<img src="${u}" alt="">`:''}<div><b>${x.k==='v'?t('VidÃ©o de l\'emballage'):t('Photo du colis')}</b><br>${fmtDT(x.t)} Â· ${fmtSize(x.s)}<br><span class="hs">SHA-256 ${esc(x.h||'')}</span></div></div>`).join('')||'<p>'+t('Aucune preuve.')+'</p>'}
   <p class="rpf">${t('Les dates viennent de l\'horloge de l\'appareil au moment de l\'enregistrement. L\'empreinte SHA-256 permet de vÃ©rifier qu\'un fichier n\'a pas Ã©tÃ© modifiÃ© depuis. Ce dossier n\'a pas de valeur d\'horodatage certifiÃ©.')}</p></div>`)}

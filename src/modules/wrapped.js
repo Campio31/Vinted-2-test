@@ -43,7 +43,7 @@ async function loadPhoto(p) { if (!p || !p.photo) return null; try { const b = a
 export async function makeWrapped(d, disc) {
   await document.fonts.load('800 80px Archivo').catch(() => {});
   const out = [], W = 1080, H = 1920, lab = perLabel(d.per), photo = await loadPhoto(d.star && d.star.p ? d.star.p : d.star);
-  const base = (bg, fg) => { const [c, x] = mkCanvas(W, H, bg); app.logoMark(x, 70, 90, 90); x.fillStyle = fg; x.font = '800 54px ' + FDN; x.fillText('max', 180, 158); x.fillStyle = fg; x.globalAlpha = .6; x.font = '500 40px ' + FDN; x.fillText('Wrapped · ' + lab, 70, 260); x.globalAlpha = 1; x.font = '500 34px ' + FDN; x.globalAlpha = .55; x.fillText(t('Fait avec Max'), 70, H - 90); x.globalAlpha = 1; return [c, x]; };
+  const base = (bg, fg) => { const [c, x] = mkCanvas(W, H, bg); app.logoMark(x, 70, 90, 90); x.fillStyle = fg; x.font = '800 54px ' + FDN; x.fillText('syno', 180, 158); x.fillStyle = fg; x.globalAlpha = .6; x.font = '500 40px ' + FDN; x.fillText('Wrapped · ' + lab, 70, 260); x.globalAlpha = 1; x.font = '500 34px ' + FDN; x.globalAlpha = .55; x.fillText(t('Fait avec Syno'), 70, H - 90); x.globalAlpha = 1; return [c, x]; };
   const big = (x, t, y, col, size) => { x.fillStyle = col; fitPx(x, t, size || 320, 960); x.fillText(t, 60, y); }, txt = (x, t, y, col, size, w) => { x.fillStyle = col; x.font = '500 ' + (size || 60) + 'px ' + FDN; return wrapTxt(x, t, 64, y, w || 950, (size || 60) * 1.25); };
   { const [c, x] = base('#111111', '#F1F2F4'); big(x, String(d.n), 900, '#FF4A1C', 420); txt(x, t(d.n > 1 ? 'vêtements sauvés de la poubelle, prêts pour une deuxième vie.' : 'vêtement sauvé de la poubelle, prêt pour une deuxième vie.'), 1020, '#F1F2F4', 64); txt(x, t('Environ {k} kg de textile (estimation à 450 g la pièce).', { k: String(d.kg).replace('.', app.DS) }), 1300, '#8a8d94', 42); out.push(c); }
   if (disc) { const [c, x] = base('#FF4A1C', '#111111'); txt(x, t('Tu as vendu'), 560, '#111', 64); big(x, tn(d.n, 'pièce', 'pièces'), 880, '#111', 250); txt(x, t('avec {m} % de marge sur le chiffre d\'affaires', { m: Math.round(d.marge * 100) }), 1010, '#111', 64); out.push(c); }
@@ -63,7 +63,7 @@ export async function makeWrapped(d, disc) {
   }
   if (d.rec) { const [c, x] = base('#FF4A1C', '#111111'); txt(x, t(d.isM ? 'Ton meilleur jour' : 'Ton meilleur mois'), 560, '#111', 64); if (disc) big(x, tn(d.recN, 'vente', 'ventes'), 880, '#111', 260); else big(x, eurR(d.rec[1]), 880, '#111', 260); txt(x, d.isM ? fd(d.rec[0]) : MOIS[+d.rec[0].slice(5) - 1] + ' ' + d.rec[0].slice(0, 4), 1010, '#111', 64); if (d.canal) txt(x, t('Plateforme n°1 : {p} ({n} ventes)', { p: tv(d.canal[0]), n: d.canal[1] }), 1180, '#111', 54); out.push(c); }
   if (d.wk && d.n >= 3) { const [c, x] = base('#111111', '#F1F2F4'); txt(x, t('Ton jour de vente'), 560, '#C9CBD0', 60); big(x, jour(d.wk.k), 880, '#FF4A1C', 260); txt(x, t('{n} ventes, soit {p} % du total', { n: d.wk.n, p: Math.round(d.wk.n / d.n * 100) }), 1010, '#F1F2F4', 60); out.push(c); }
-  { const [c, x] = mkCanvas(W, H, '#111111'); app.logoMark(x, W / 2 - 150, 700, 300); x.fillStyle = '#F1F2F4'; x.font = '800 150px ' + FDN; x.textAlign = 'center'; x.fillText('max', W / 2, 1130); x.fillStyle = '#8a8d94'; x.font = '500 48px ' + FDN; x.fillText(t('Le suivi de stock des revendeurs'), W / 2, 1220); out.push(c); }
+  { const [c, x] = mkCanvas(W, H, '#111111'); app.logoMark(x, W / 2 - 150, 700, 300); x.fillStyle = '#F1F2F4'; x.font = '800 150px ' + FDN; x.textAlign = 'center'; x.fillText('syno', W / 2, 1130); x.fillStyle = '#8a8d94'; x.font = '500 48px ' + FDN; x.fillText(t('Le suivi de stock des revendeurs'), W / 2, 1220); out.push(c); }
   return out;
 }
 
@@ -81,7 +81,7 @@ export function openWrapped(per0) {
     $('shc').onclick = async e => {
       const p = e.target.closest('[data-wp]'); if (p) { per = p.dataset.wp; LSs('wrPer', per); draw(); return; }
       if (e.target.closest('#wr_go')) { $('wr_go').disabled = true; $('wr_go').textContent = window.t('Création…'); res = await makeWrapped(d, disc); $('wr_r').innerHTML = `<div class="card"><div class="socp">${res.map((c, i) => `<canvas data-i="${i}"></canvas>`).join('')}</div><div class="acts"><button type="button" class="btn mint" id="wr_sh">${window.t('Partager ou télécharger ({n})', { n: res.length })}</button></div></div>`; res.forEach((c, i) => { const v = $('wr_r').querySelector('canvas[data-i="' + i + '"]'); v.width = c.width; v.height = c.height; v.getContext('2d').drawImage(c, 0, 0); }); $('wr_go').disabled = false; $('wr_go').textContent = window.t('Créer à nouveau'); $('wr_r').scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
-      if (e.target.closest('#wr_sh')) { const fs = []; for (let i = 0; i < res.length; i++) { const b = await new Promise(r => res[i].toBlob(r, 'image/png')); fs.push(new File([b], 'max-wrapped-' + per + '-' + (i + 1) + '.png', { type: 'image/png' })); } await shareFiles(fs, window.t('Mon récap Max')); }
+      if (e.target.closest('#wr_sh')) { const fs = []; for (let i = 0; i < res.length; i++) { const b = await new Promise(r => res[i].toBlob(r, 'image/png')); fs.push(new File([b], 'max-wrapped-' + per + '-' + (i + 1) + '.png', { type: 'image/png' })); } await shareFiles(fs, window.t('Mon récap Syno')); }
     };
   };
   draw();

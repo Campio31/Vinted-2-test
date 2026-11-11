@@ -72,7 +72,7 @@ export function openFournQ(){
  const cur=fournList(),a0=Object.assign({},app.cfg.fournQ||{});
  if(!a0.items)a0.items=FQ_ITEMS.filter(([k])=>cur.some(f=>f.id==='q-'+k)).map(([k])=>k);
  a0.det=a0.det||{};cur.forEach(f=>{if(String(f.id).startsWith('q-'))a0.det[f.id.slice(2)]={q:f.q,c:f.c,u:f.u,seuil:f.seuil}});
- openWizard({title:'Fournitures',intro:'Quelques questions sur ce que tu utilises pour tes colis. Max suit ensuite le stock, l\'alerte de rachat et le coût réel d\'un colis. Tu peux refaire le questionnaire à tout moment.',answers:a0,
+ openWizard({title:'Fournitures',intro:'Quelques questions sur ce que tu utilises pour tes colis. Syno suit ensuite le stock, l\'alerte de rachat et le coût réel d\'un colis. Tu peux refaire le questionnaire à tout moment.',answers:a0,
   steps:[{k:'items',type:'multi',q:'Quelles fournitures utilises-tu ?',h:'Choisis tout ce que tu utilises pour emballer.',o:FQ_ITEMS,need:a=>(a.items||[]).length>0,needMsg:'Choisis au moins une fourniture'},
    {k:'det',type:'table',q:'Où en es-tu pour chacune ?',h:'Laisse vide ce que tu ne sais pas. « Utilisé par colis » fait baisser le stock tout seul à chaque vente.',items:a=>FQ_ITEMS.filter(([k])=>(a.items||[]).includes(k)).map(([k,l])=>({k,l})),cols:[{k:'q',l:'En stock'},{k:'c',l:'Prix à l\'unité',u:'€'},{k:'u',l:'Utilisé par colis'},{k:'seuil',l:'Alerte à partir de'}]}],
   onDone:a=>{const chosen=a.items||[],keep=cur.filter(f=>!String(f.id).startsWith('q-')||chosen.includes(String(f.id).slice(2))),out=keep.filter(f=>!String(f.id).startsWith('q-'));

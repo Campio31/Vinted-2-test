@@ -2,7 +2,7 @@ import { app } from '../state.js';
 import { $, LSg, LSs, today } from './core.js';
 import { go } from './nav.js';
 
-/* ---------- accueil : 3 questions pour personnaliser Max ---------- */
+/* ---------- accueil : 3 questions pour personnaliser Syno ---------- */
 /* Proposé une seule fois, à un compte sans pièce. Les réponses sont gardées dans les réglages (donc sur tous les appareils)
    et servent à choisir les 8 outils du mode simple et un objectif de départ. */
 const STEPS = [
@@ -17,7 +17,7 @@ const STEPS = [
     ['both', 'Les deux', 'Vinted et lives'],
     ['autre', 'Ailleurs', 'Leboncoin, vide-greniers, Instagram…'],
   ] },
-  { k: 'obj', q: 'Quel est ton objectif ?', h: 'Max s\'en sert pour te dire si tu es en avance ou en retard. Modifiable dans Réglages.', o: [
+  { k: 'obj', q: 'Quel est ton objectif ?', h: 'Syno s\'en sert pour te dire si tu es en avance ou en retard. Modifiable dans Réglages.', o: [
     ['poche', 'De l\'argent de poche', 'Environ 100 € de bénéfice par mois'],
     ['comp', 'Un complément de revenu', 'Environ 500 € de bénéfice par mois'],
     ['vivre', 'En vivre', 'Environ 2 000 € de bénéfice par mois'],
@@ -35,7 +35,7 @@ const ov = () => $('welcome');
 function draw() {
   const s = STEPS[step], last = step === STEPS.length - 1;
   ov().innerHTML = `<div class="wbox">
-    <div class="wst">${step ? '' : t('Bienvenue sur Max') + ' · '}${t('Question {i} sur {n}', { i: step + 1, n: STEPS.length })}</div>
+    <div class="wst">${step ? '' : t('Bienvenue sur Syno') + ' · '}${t('Question {i} sur {n}', { i: step + 1, n: STEPS.length })}</div>
     <div class="wbar">${STEPS.map((_, i) => `<i class="${i <= step ? 'on' : ''}"></i>`).join('')}</div>
     <h2 id="wq">${t(s.q)}</h2><p class="sub">${t(s.h)}</p>
     ${s.o.map(([v, l, d]) => `<button type="button" class="wopt${ans[s.k] === v ? ' on' : ''}" data-wo="${v}"><b>${t(l)}</b><small>${t(d)}</small></button>`).join('')}
@@ -59,8 +59,8 @@ function finish(skip) {
   close();
   if (!skip && wantEx && !app.P.length) app.loadExamples();
   go('dash');
-  /* premier lancement : les questionnaires des indicateurs s'ouvrent une fois */
-  if (!app.cfg.setupDone) setTimeout(() => { if (!app.cfg.setupDone && app.openSetup) app.openSetup(); }, 500);
+  /* premier lancement : le tutoriel s'offre une fois, puis les questionnaires des indicateurs */
+  setTimeout(() => { if (!LSg('tutoSeen', false) && app.openTuto) app.openTuto({ first: true }); else if (!app.cfg.setupDone && app.openSetup) app.openSetup(); }, 500);
 }
 
 export function openWelcome() {

@@ -4,7 +4,7 @@ import { CFG0 } from './settings-core.js';
 import { BACKC, COL, backSVG, garmentSVG, packSVG } from './cartes-art.js';
 
 /* ---------- Cartes à collectionner : Collection Hiver (43 cartes, direction « Papier Encré ») ---------- */
-/* Des cartes à collectionner, pas un jeu : aucun point d'attaque ni de défense, aucun prix. Chaque carte est un vêtement ou une pièce de l'univers de Max.
+/* Des cartes à collectionner, pas un jeu : aucun point d'attaque ni de défense, aucun prix. Chaque carte est un vêtement ou une pièce de l'univers de Syno.
    Sept raretés, des versions Super (fond noir) de Rare à Mythique, et un état (de Correct à Neuf) que suivent les marques d'usure.
    Packs « Cristal » : Givre (simple), Glacier (rare), Aurore (sublime). Tout est gardé dans les réglages (cfg.cartes), donc sur tous tes appareils. */
 Object.assign(CFG0, { cartes: null });
@@ -65,9 +65,9 @@ const RAW = [
   C(5, 'GANTS COMÈTE', 'Gants', 'Soie', 1959, '7', 'Argent', 'gants', 'uni', 'Légers comme une traînée de lumière dans un ciel d\'hiver.', { fin: 'holo' }),
   C(5, 'ÉCHARPE GALAXIE', 'Écharpe', 'Soie', 1971, 'U', 'Violet', 'echarpe', 'uni', 'Dans ses plis, on devine les constellations les soirs de grand froid.', { fin: 'holo' }),
   C(5, 'BONNET CONSTELLATION', 'Bonnet', 'Cachemire', 1968, 'U', 'Indigo', 'bonnet', 'uni', 'Chaque point brillant est une étoile retrouvée par sa propriétaire.', { fin: 'holo' }),
-  C(6, 'LA PREMIÈRE', 'Blazer', 'Laine', 1978, '40', 'Ivoire', 'blazer', 'uni', 'Le tout premier article vendu sur Max. Il n\'existe qu\'en trois exemplaires.', { fin: 'or', e: 5, unique: 'first' }),
+  C(6, 'LA PREMIÈRE', 'Blazer', 'Laine', 1978, '40', 'Ivoire', 'blazer', 'uni', 'Le tout premier article vendu sur Syno. Il n\'existe qu\'en trois exemplaires.', { fin: 'or', e: 5, unique: 'first' }),
   C(6, 'LE CINTRE D\'OR', 'Objet', 'Laiton', 1950, '—', 'Or', 'cintre', 'uni', 'Le cintre de tous les cintres : il a porté la collection entière.', { fin: 'or', e: 5, unique: 'hundred' }),
-  C(6, 'LE COLIS ZÉRO', 'Objet', 'Carton', 2019, '—', 'Kraft', 'colis', 'uni', 'Le premier colis expédié depuis Max, fermé avec trop de scotch.', { fin: 'or', e: 5, unique: 'parcel' }),
+  C(6, 'LE COLIS ZÉRO', 'Objet', 'Carton', 2019, '—', 'Kraft', 'colis', 'uni', 'Le premier colis expédié depuis Syno, fermé avec trop de scotch.', { fin: 'or', e: 5, unique: 'parcel' }),
 ];
 export const CARDS = RAW.map((c, i) => Object.assign(c, { id: 'h' + String(i + 1).padStart(2, '0'), num: i + 1, tot: RAW.length, set: SET_NAME }));
 const byId = Object.fromEntries(CARDS.map(c => [c.id, c]));

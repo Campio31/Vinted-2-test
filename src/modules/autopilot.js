@@ -12,13 +12,13 @@ import { fiscStatus } from './fiscal.js';
 import { go } from './nav.js';
 import { streakInfo } from './gamification.js';
 
-/* ---------- Max Autopilot, phase 1 : « Ma journée » ---------- */
+/* ---------- Syno Autopilot, phase 1 : « Ma journée » ---------- */
 /* Un moteur de tâches calcule ce qu'il y a à faire d'après tes données (des règles, pas d'IA) et propose des lots à valider.
-   Niveaux : Manuel (Max liste, tu fais), Assisté (Max prépare un lot, tu valides : par défaut), Automatique encadré (pas encore disponible).
+   Niveaux : Manuel (Syno liste, tu fais), Assisté (Syno prépare un lot, tu valides : par défaut), Automatique encadré (pas encore disponible).
    Chaque lot appliqué est inscrit dans le journal, et peut être annulé. */
 Object.assign(CFG0, { apMode: 'assist', apLog: [], apStats: { lots: 0, items: 0, min: 0 }, rules: {}, ruleSnooze: {}, apSnooze: {} });
 
-export const AP_MODES = [['manual', 'Manuel', 'Max liste les tâches, tu fais tout'], ['assist', 'Assisté', 'Max prépare, tu valides'], ['auto', 'Automatique encadré', 'Bientôt']];
+export const AP_MODES = [['manual', 'Manuel', 'Syno liste les tâches, tu fais tout'], ['assist', 'Assisté', 'Syno prépare, tu valides'], ['auto', 'Automatique encadré', 'Bientôt']];
 const MIN = { fin: .3, colis: .5, pub: 1, prix: 1.5 };   /* minutes économisées par pièce, estimation */
 const MAXI = 5;                                         /* éléments montrés par tâche */
 export const apMode = () => (app.cfg.apMode === 'manual' ? 'manual' : 'assist');
@@ -70,15 +70,15 @@ function snoozeTask(id) {
 const lastDayOfMonth = () => { const d = new Date(); return d.getDate() === new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate(); };
 const lateColis = () => colisList().some(p => ok(p.dv) && days(p.dv, today()) >= 2);
 export const RULES = [
-  { id: 'dormant', name: 'Stock dormant', d: 'Quand une pièce reste en ligne sans se vendre, Max prépare une baisse de prix à valider.', task: 'prix', param: { k: 'jours', def: 45, min: 14, max: 180, u: 'jours' }, due: () => true },
+  { id: 'dormant', name: 'Stock dormant', d: 'Quand une pièce reste en ligne sans se vendre, Syno prépare une baisse de prix à valider.', task: 'prix', param: { k: 'jours', def: 45, min: 14, max: 180, u: 'jours' }, due: () => true },
   { id: 'colis', name: 'Colis en retard', d: 'Un colis qui attend depuis 2 jours ou plus passe en haut de ta journée.', task: 'colis', due: lateColis },
-  { id: 'finalise', name: 'Ventes à finaliser en fin de mois', d: 'Le dernier jour du mois, Max prépare le lot « finaliser » avant ta déclaration.', task: 'fin', due: lastDayOfMonth },
-  { id: 'plafond', name: 'Plafond micro', d: 'Max te prévient à 75 % puis 90 % du plafond, avec la projection.', task: 'plafond', due: () => true },
+  { id: 'finalise', name: 'Ventes à finaliser en fin de mois', d: 'Le dernier jour du mois, Syno prépare le lot « finaliser » avant ta déclaration.', task: 'fin', due: lastDayOfMonth },
+  { id: 'plafond', name: 'Plafond micro', d: 'Syno te prévient à 75 % puis 90 % du plafond, avec la projection.', task: 'plafond', due: () => true },
   { id: 'fourn', name: 'Fournitures basses', d: 'Quand un article passe sous son seuil, « à racheter » s\'ajoute à ta journée.', task: 'fourn', due: () => true },
-  { id: 'pub', name: 'Nouvelles pièces', d: 'Quand trop de pièces ne sont pas encore publiées, Max prépare le lot « publier ».', task: 'pub', param: { k: 'nb', def: 10, min: 3, max: 100, u: 'pièces' }, due: () => app.P.filter(p => avail(p) && !ok(p.pub)).length > ruleParam('pub') },
-  { id: 'rapport', name: 'Fin de mois', d: 'Le dernier jour du mois, Max te prépare le rapport PDF du mois.', make: () => lastDayOfMonth() && app.P.length ? { id: 'r-rapport', tone: 'n', n: 0, title: t('Rapport du mois'), why: t('Le mois se termine : enregistre ton rapport en PDF.'), go: 'rapport', btn: t('Ouvrir les rapports') } : null },
-  { id: 'sauvegarde', name: 'Sauvegarde', d: 'Chaque semaine, Max te rappelle de sauvegarder.', task: 'backup', due: () => true },
-  { id: 'serie', name: 'Série de publication', d: 'En fin de journée, Max te prévient si ta série est en danger.', make: () => { const s = streakInfo(); return s.n > 0 && !s.today && new Date().getHours() >= 17 ? { id: 'r-serie', tone: 'o', n: s.n, title: t('Ta série de {n} jours est en danger', { n: s.n }), why: t('Publie une pièce avant la fin de la journée.'), go: 'list:Apub', btn: t('Voir à publier') } : null; } },
+  { id: 'pub', name: 'Nouvelles pièces', d: 'Quand trop de pièces ne sont pas encore publiées, Syno prépare le lot « publier ».', task: 'pub', param: { k: 'nb', def: 10, min: 3, max: 100, u: 'pièces' }, due: () => app.P.filter(p => avail(p) && !ok(p.pub)).length > ruleParam('pub') },
+  { id: 'rapport', name: 'Fin de mois', d: 'Le dernier jour du mois, Syno te prépare le rapport PDF du mois.', make: () => lastDayOfMonth() && app.P.length ? { id: 'r-rapport', tone: 'n', n: 0, title: t('Rapport du mois'), why: t('Le mois se termine : enregistre ton rapport en PDF.'), go: 'rapport', btn: t('Ouvrir les rapports') } : null },
+  { id: 'sauvegarde', name: 'Sauvegarde', d: 'Chaque semaine, Syno te rappelle de sauvegarder.', task: 'backup', due: () => true },
+  { id: 'serie', name: 'Série de publication', d: 'En fin de journée, Syno te prévient si ta série est en danger.', make: () => { const s = streakInfo(); return s.n > 0 && !s.today && new Date().getHours() >= 17 ? { id: 'r-serie', tone: 'o', n: s.n, title: t('Ta série de {n} jours est en danger', { n: s.n }), why: t('Publie une pièce avant la fin de la journée.'), go: 'list:Apub', btn: t('Voir à publier') } : null; } },
 ];
 export const ruleOn = id => ((app.cfg.rules || {})[id] || {}).on !== false;
 export function ruleParam(id) { const r = RULES.find(x => x.id === id), v = +((app.cfg.rules || {})[id] || {}).p; return r && r.param ? (isFinite(v) && v >= r.param.min && v <= r.param.max ? Math.round(v) : r.param.def) : 0; }
@@ -111,10 +111,10 @@ function logRule(id, res) { const r = RULES.find(x => x.id === id); app.setCfg({
 export function snoozeRule(id) { const o = Object.assign({}, app.cfg.ruleSnooze); o[id] = addDays(today(), 1); app.setCfg({ ruleSnooze: o }); ruleHandled(id); logRule(id, 'later'); }
 export function setRule(id, patch) { const o = Object.assign({}, app.cfg.rules), cur = Object.assign({ on: true }, o[id]); o[id] = Object.assign(cur, patch); app.setCfg({ rules: o }); }
 
-/* ---- carte « Règles de Max » dans Réglages ---- */
+/* ---- carte « Règles de Syno » dans Réglages ---- */
 function renderRules() {
   const c = $('rlc'); if (!c || c.contains(document.activeElement)) return;
-  c.innerHTML = `<h3>${t('Règles de Max')}</h3><p class="sub">${t('Des règles prêtes à activer. Elles proposent des tâches dans « Ma journée », jamais d\'action sans ta validation. Évaluées à l\'ouverture de l\'appli.')}</p>`
+  c.innerHTML = `<h3>${t('Règles de Syno')}</h3><p class="sub">${t('Des règles prêtes à activer. Elles proposent des tâches dans « Ma journée », jamais d\'action sans ta validation. Évaluées à l\'ouverture de l\'appli.')}</p>`
     + RULES.map(r => `<div class="rur"><label class="chk cfr"><input type="checkbox" data-ru="${r.id}"${ruleOn(r.id) ? ' checked' : ''}><span><b>${t(r.name)}</b><small>${t(r.d)}</small></span></label>${r.param ? `<div class="cfld rup"><label class="l" for="rp_${r.id}">${r.id === 'dormant' ? t('À partir de') : t('Au-delà de')}</label><span class="uin"><input type="text" inputmode="numeric" id="rp_${r.id}" data-rp="${r.id}" value="${ruleParam(r.id)}"><i aria-hidden="true">${t(r.param.u)}</i></span></div>` : ''}</div>`).join('');
 }
 app.renderRules = renderRules;
@@ -186,11 +186,11 @@ export function journeeHTML() {
    ${T.length ? `<div class="hint apsw">${t('Glisse une tâche vers la droite pour la faire, vers la gauche pour la reporter à demain.')}</div>` : ''}
    ${T.map(x => `<div class="apw" data-tid="${esc(x.id)}"><div class="apbg" aria-hidden="true"><span>${t('Faire')}</span><span>${t('Reporter')}</span></div>${taskHTML(x)}</div>`).join('')}
    ${nSn ? `<div class="hint apsn">${t(nSn > 1 ? '{n} tâches reportées à demain.' : '{n} tâche reportée à demain.', { n: nSn })} <button type="button" class="lnk" data-ap="unsnooze">${t('Les remettre')}</button></div>` : ''}
-   <details class="apd"${showLog || showSet ? ' open' : ''}><summary>${t('Réglages de Max')}</summary>
+   <details class="apd"${showLog || showSet ? ' open' : ''}><summary>${t('Réglages de Syno')}</summary>
    <div class="apm" role="group" aria-label="${esc(t('Niveau d\'automatisation'))}">${AP_MODES.map(([k, l, d]) => `<button type="button" class="${mode === k ? 'on' : ''}" data-ap="mode:${k}"${k === 'auto' ? ' disabled' : ''} title="${esc(t(d))}">${t(l)}</button>`).join('')}</div>
    <div class="hint" style="margin:6px 0 0">${t(AP_MODES.find(m => m[0] === mode)[2])}.</div>
-   ${st.lots ? `<div class="hint" style="margin:8px 0 0">${t('Avec Max : {l} lots, {n} modifications, environ {m} min gagnées (estimation).', { l: st.lots, n: st.items, m: Math.round(st.min) })}</div>` : ''}
-   <button type="button" class="lnk" data-ap="rules" style="margin-top:8px;margin-right:14px">${t('Règles de Max')}</button>${log.length ? `<button type="button" class="lnk" data-ap="log" style="margin-top:8px">${showLog ? t('Masquer le journal') : t('Journal des actions')}</button>` : ''}
+   ${st.lots ? `<div class="hint" style="margin:8px 0 0">${t('Avec Syno : {l} lots, {n} modifications, environ {m} min gagnées (estimation).', { l: st.lots, n: st.items, m: Math.round(st.min) })}</div>` : ''}
+   <button type="button" class="lnk" data-ap="rules" style="margin-top:8px;margin-right:14px">${t('Règles de Syno')}</button>${log.length ? `<button type="button" class="lnk" data-ap="log" style="margin-top:8px">${showLog ? t('Masquer le journal') : t('Journal des actions')}</button>` : ''}
    ${showLog ? `<div class="apj">${log.slice(0, 15).map(e => `<div class="${e.undone ? 'un' : ''}"><span>${new Date(e.t).toLocaleString(app.LOC, { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</span><b>${e.k === 'rule' ? t('Règle : {r}', { r: t(e.rule) }) + ' · ' + t({ later: 'reportée à demain', off: 'désactivée' }[e.res] || e.res) : t(KIND_LABEL[e.k] || e.k) + (e.rule ? ' · ' + t('règle : {r}', { r: t(e.rule) }) : '') + ' · ' + e.n}</b>${e.undone ? `<em>${t('annulé')}</em>` : ''}</div>`).join('')}</div>` : ''}
    </details>
   </div>`;

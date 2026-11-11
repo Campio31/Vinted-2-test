@@ -32,7 +32,7 @@ async function openTrash(){const now=Date.now(),T=((await metaGet('trash'))||[])
 function histHTML(p){const h=(p.h||[]).slice().reverse();if(!h.length)return'';
  return`<details class="card hist"><summary>${t('Historique')} · ${h.length}</summary>${h.slice(0,15).map(x=>{const d=new Date(x.t);return`<div class="hr2"><span>${fd(d.toISOString().slice(0,10))}</span><b>${esc(trEv(x.e))}</b></div>`}).join('')}</details>`}
 /* l'historique est enregistré en français ; on le traduit à l'affichage */
-function trEv(e){let m;
+export function trEv(e){let m;
  if(m=/^Vendue (.+) sur (.+)$/.exec(e))return t('Vendue {p} sur {c}',{p:m[1],c:tv(m[2])});
  if(m=/^Prix visé : (.+)$/.exec(e))return t('Prix visé : {p}',{p:m[1]});
  if(m=/^Retour enregistré \((.+)\)$/.exec(e))return t('Retour enregistré')+' ('+t(m[1])+')';

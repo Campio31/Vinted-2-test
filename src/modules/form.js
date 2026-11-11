@@ -16,12 +16,21 @@ function canon(v){v=(v||'').trim();return allBrands().find(b=>b.toLowerCase()===
 const L=(x,n)=>String(x==null?'':x).slice(0,n);
 const mod=p=>(p.modele==null||p.modele===''?'0':String(p.modele));
 export const combo=p=>[p.cat,p.sub,p.marque,mod(p),p.grade].join('\u0001');
-/* Le code garde son numéro tant que son début (catégorie, type, marque, modèle, grade) ne change pas, majuscules ou non.
-   Un nouveau code prend le plus grand numéro existant pour ce début, plus un : jamais de doublon. */
-export function genCode(p){if(!p.cat||!p.sub||!p.marque||!p.grade)return undefined;const pre=L(p.cat,2)+L(p.sub,3)+L(p.marque,2)+L(mod(p),3)+L(p.grade,1),pl=pre.toLowerCase()+'-',others=app.P.filter(q=>q.id!==p.id&&q.code);
- if(p.code&&p.code.toLowerCase().startsWith(pl)&&!others.some(q=>q.code.toLowerCase()===p.code.toLowerCase()))return p.code;
- let n=0;others.forEach(q=>{if(q.code.toLowerCase().startsWith(pl)){const k=parseInt(q.code.slice(pl.length),10);if(k>n)n=k}});return pre+'-'+pad(n+1,3)}
-
+/* Code article : année + mois + 4 caractères tirés au hasard, ex. 2611-K7QF.
+   Court à écrire sur une étiquette, unique sans coordination entre appareils (près d'un million de combinaisons par mois, sans les caractères ambigus 0 O 1 I),
+   et vérifié contre les codes existants. Un code donné ne change plus jamais ; les anciens codes (ex. TsT-IPo0A-001) restent tels quels. */
+const CODE_ALPHA = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+export function newCode() {
+  const d = new Date(), ym = String(d.getFullYear()).slice(2) + pad(d.getMonth() + 1, 2), used = new Set(app.P.map(q => String(q.code || '').toUpperCase()));
+  for (let k = 0; k < 60; k++) {
+    const a = new Uint32Array(4);
+    if (globalThis.crypto && crypto.getRandomValues) crypto.getRandomValues(a); else for (let i = 0; i < 4; i++) a[i] = Math.floor(Math.random() * 4294967296);
+    let s = ''; for (let i = 0; i < 4; i++) s += CODE_ALPHA[a[i] % 32];
+    if (!used.has(ym + '-' + s)) return ym + '-' + s;
+  }
+  return ym + '-' + Date.now().toString(36).slice(-4).toUpperCase();
+}
+export function genCode(p) { return p.code || p._code || newCode(); }
 /* ---------- formulaire (ajout et modification) ---------- */
 const SIZES=['XS','S','M','L','XL','XXL','3XL'],NUM=['32','34','36','38','40','42','44','46','48','50'];
 const SIZES_CAT={Pantalon:NUM,RobeJupe:[...SIZES,'34','36','38','40','42','44'],Autres:[...SIZES,'TU']};
@@ -79,7 +88,7 @@ export function mkForm(host,S,o){
  function updateRenta(){const el=host.querySelector('#rp');if(!el)return;const a=num(S.achat),v=num(S.pvise);
   if(isNaN(a)||isNaN(v)||v<=0){el.innerHTML='<div class="hint">'+t('Saisis le prix d\'achat et le prix de vente visé pour voir la marge.')+'</div>';return}
   const fr=app.defFrais(v,'Vinted'),r=app.renta(a,v,fr,app.estDelai(S,v));el.innerHTML=`<div class="pv">${app.rentaHTML(r)}<div class="hint" style="margin-top:6px">${esc(t('Frais comptés : {f} (emballage, envoi et commission d\'après tes réglages)',{f:eur(fr)}))}</div></div>`}
- function cprev(){const e=host.querySelector('#cdp');if(!e)return;const c=genCode(Object.assign({},S,{id:S.id||'_new'}));e.textContent=c?t('Code : {c}',{c}):t('Code : renseigne catégorie, type, marque et grade')}
+ function cprev(){const e=host.querySelector('#cdp');if(!e)return;if(!S.code&&!S._code)S._code=newCode();e.textContent=t('Code : {c}',{c:S.code||S._code})}
  function draw(){
   if(o.onChange)Promise.resolve().then(()=>o.onChange(S));
   const cats=mrg(CATS0,freq('cat')),subs=S.cat?mrg(SUBS0[S.cat],subsOf(S.cat)):[],sizes=sizesFor(S.cat),provs=[...new Set([...PROV0,...freq('prov')])];
