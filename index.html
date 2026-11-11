@@ -3,12 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Max</title>
+<title>Syno</title>
 <meta name="description" content="Suivi du stock et des ventes de vêtements de seconde main (Vinted, TikTok Live).">
 <meta name="theme-color" content="#F1F2F4">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Max">
+<meta name="apple-mobile-web-app-title" content="Syno">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" href="icons/icon-192.png">
@@ -29,7 +29,7 @@
  <header><h1 id="ttl">Ajouter</h1><div class="hr"><button type="button" class="ib" id="mic" aria-label="Commande vocale"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button><button type="button" class="ib" id="rptb" aria-label="Rapport PDF du mois" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l4 4v14H6zM14 3v5h5M9 13h7M9 17h5"/></svg></button><button type="button" class="ib" id="tl" aria-label="Réglages"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button><button type="button" class="ib" id="offdot" hidden aria-label="Hors ligne"><i></i></button><div id="sync" hidden><i></i><span>Chargement…</span></div></div></header>
  <div id="ro" class="warn" hidden>Le stockage du navigateur est indisponible (navigation privée ?). Les données seront perdues à la fermeture : exporte une sauvegarde JSON.</div>
  <main>
-  <section id="v-add" class="view on"><div class="card frm" id="fadd"></div></section>
+  <section id="v-add" class="view on"><div class="card frm" id="fadd"></div><aside class="card" id="fprev" aria-label="Aperçu de la fiche"></aside></section>
   <section id="v-sales" class="view"></section>
   <section id="v-tools" class="view"><div id="tv"></div></section>
   <section id="v-quick" class="view">
@@ -43,9 +43,11 @@
    </div>
   </section>
   <section id="v-list" class="view">
+   <div class="chips" id="smode" style="margin-bottom:10px"><button type="button" class="chip sm on" data-smode="stock">Stock</button><button type="button" class="chip sm" data-smode="crm">CRM · test</button></div>
    <div class="srch"><input type="search" id="q" placeholder="Rechercher (marque, type, code, taille…)" autocomplete="off"></div>
    <div class="chips" id="flt" style="margin-bottom:12px"></div>
    <div id="lst"></div>
+   <div id="crm" hidden></div>
   </section>
   <section id="v-dash" class="view">
    <div class="chips" id="per" style="margin-bottom:12px"></div>
@@ -98,7 +100,7 @@
   </section>
  </main>
  <nav id="nav">
-  <div class="brand"><svg class="lg" viewBox="0 0 104 104" aria-hidden="true"><rect width="104" height="104" fill="#111111"/><rect x="12" y="68" width="80" height="18" rx="3" fill="#F1F2F4"/><rect x="18" y="46" width="68" height="18" rx="3" fill="#C9CBD0"/><rect x="32" y="14" width="58" height="18" rx="3" fill="#FF4A1C" transform="rotate(-12 62 24)"/><path d="M20 28H32M16 20H26" stroke="#FF4A1C" stroke-width="3" stroke-linecap="round" fill="none"/></svg><span>max</span></div>
+  <div class="brand"><svg class="lg" viewBox="0 0 200 200" aria-hidden="true"><circle cx="106" cy="106" r="92" fill="#16130f"/><circle cx="100" cy="100" r="92" fill="#f3ead7" stroke="#16130f" stroke-width="6"/><g transform="translate(0.0 -18.0) scale(1.000)"><circle cx="66" cy="102" r="26" fill="#f3ead7" stroke="#16130f" stroke-width="5"/><circle cx="100" cy="82" r="26" fill="#f3ead7" stroke="#16130f" stroke-width="5"/><circle cx="134" cy="102" r="26" fill="#f3ead7" stroke="#16130f" stroke-width="5"/><circle cx="72" cy="134" r="26" fill="#f3ead7" stroke="#16130f" stroke-width="5"/><circle cx="128" cy="134" r="26" fill="#f3ead7" stroke="#16130f" stroke-width="5"/><circle cx="100" cy="112" r="26" fill="#f3ead7" stroke="#16130f" stroke-width="5"/><circle cx="66" cy="102" r="23" fill="#f3ead7"/><circle cx="100" cy="82" r="23" fill="#f3ead7"/><circle cx="134" cy="102" r="23" fill="#f3ead7"/><circle cx="72" cy="134" r="23" fill="#f3ead7"/><circle cx="128" cy="134" r="23" fill="#f3ead7"/><circle cx="100" cy="112" r="23" fill="#f3ead7"/><ellipse cx="54" cy="116" rx="12" ry="7" transform="rotate(-20 54 116)" fill="#16130f"/><ellipse cx="146" cy="116" rx="12" ry="7" transform="rotate(20 146 116)" fill="#16130f"/><path d="M100 98 Q128 100 126 130 Q122 158 100 160 Q78 158 74 130 Q72 100 100 98Z" fill="#16130f"/><circle cx="90" cy="124" r="4" fill="#f3ead7"/><circle cx="110" cy="124" r="4" fill="#f3ead7"/><ellipse cx="100" cy="142" rx="6" ry="4" fill="#ff5a36"/><path d="M82 176 V164 M118 176 V164" stroke="#16130f" stroke-width="6" stroke-linecap="round"/><g transform="translate(138 70) rotate(18)"><path d="M0 0 H22 L28 10 L22 20 H0 Z" fill="#ffc933" stroke="#16130f" stroke-width="4" stroke-linejoin="round"/><circle cx="21" cy="10" r="2.5" fill="#16130f"/></g></g></svg><span>syno</span></div>
   <button data-v="list" type="button" aria-label="Stock"><svg viewBox="0 0 24 24"><path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/></svg><span class="nl">Stock</span></button>
   <button data-v="sales" type="button" aria-label="Vente"><svg viewBox="0 0 24 24"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6"/></svg><span class="nl">Vente</span></button>
   <button data-v="add" class="on addb" type="button" aria-label="Ajouter une pièce"><span class="fab"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span><span class="nl">Ajouter</span></button>
@@ -107,7 +109,7 @@
  </nav>
 </div>
 <div id="auth" hidden><div class="card">
- <div class="authlogo"><svg class="lg" viewBox="0 0 104 104" aria-hidden="true"><rect width="104" height="104" fill="#111111"/><rect x="12" y="68" width="80" height="18" rx="3" fill="#F1F2F4"/><rect x="18" y="46" width="68" height="18" rx="3" fill="#C9CBD0"/><rect x="32" y="14" width="58" height="18" rx="3" fill="#FF4A1C" transform="rotate(-12 62 24)"/><path d="M20 28H32M16 20H26" stroke="#FF4A1C" stroke-width="3" stroke-linecap="round" fill="none"/></svg><b>max</b></div>
+ <div class="authlogo"><svg class="lg" viewBox="0 0 200 200" aria-hidden="true"><circle cx="106" cy="106" r="92" fill="#16130f"/><circle cx="100" cy="100" r="92" fill="#f3ead7" stroke="#16130f" stroke-width="6"/><g transform="translate(0.0 -18.0) scale(1.000)"><circle cx="66" cy="102" r="26" fill="#f3ead7" stroke="#16130f" stroke-width="5"/><circle cx="100" cy="82" r="26" fill="#f3ead7" stroke="#16130f" stroke-width="5"/><circle cx="134" cy="102" r="26" fill="#f3ead7" stroke="#16130f" stroke-width="5"/><circle cx="72" cy="134" r="26" fill="#f3ead7" stroke="#16130f" stroke-width="5"/><circle cx="128" cy="134" r="26" fill="#f3ead7" stroke="#16130f" stroke-width="5"/><circle cx="100" cy="112" r="26" fill="#f3ead7" stroke="#16130f" stroke-width="5"/><circle cx="66" cy="102" r="23" fill="#f3ead7"/><circle cx="100" cy="82" r="23" fill="#f3ead7"/><circle cx="134" cy="102" r="23" fill="#f3ead7"/><circle cx="72" cy="134" r="23" fill="#f3ead7"/><circle cx="128" cy="134" r="23" fill="#f3ead7"/><circle cx="100" cy="112" r="23" fill="#f3ead7"/><ellipse cx="54" cy="116" rx="12" ry="7" transform="rotate(-20 54 116)" fill="#16130f"/><ellipse cx="146" cy="116" rx="12" ry="7" transform="rotate(20 146 116)" fill="#16130f"/><path d="M100 98 Q128 100 126 130 Q122 158 100 160 Q78 158 74 130 Q72 100 100 98Z" fill="#16130f"/><circle cx="90" cy="124" r="4" fill="#f3ead7"/><circle cx="110" cy="124" r="4" fill="#f3ead7"/><ellipse cx="100" cy="142" rx="6" ry="4" fill="#ff5a36"/><path d="M82 176 V164 M118 176 V164" stroke="#16130f" stroke-width="6" stroke-linecap="round"/><g transform="translate(138 70) rotate(18)"><path d="M0 0 H22 L28 10 L22 20 H0 Z" fill="#ffc933" stroke="#16130f" stroke-width="4" stroke-linejoin="round"/><circle cx="21" cy="10" r="2.5" fill="#16130f"/></g></g></svg><b>syno</b></div>
  <p class="sub">Connecte-toi pour retrouver ton stock sur tous tes appareils.</p>
  <div class="fld"><label class="l" for="au_mail">E-mail</label><input type="email" id="au_mail" inputmode="email" autocomplete="username email" autocapitalize="none" spellcheck="false"></div>
  <div class="fld"><label class="l" for="au_pw">Mot de passe</label><div class="pwrow"><input type="password" id="au_pw" autocomplete="current-password"><button type="button" class="btn sec sm" id="au_eye" aria-label="Afficher le mot de passe">Afficher</button></div></div>
@@ -116,7 +118,7 @@
  <button type="button" class="lnk" id="au_fg" style="margin-top:10px">Mot de passe oublié ?</button>
  <div id="au_msg" role="status"></div>
  <p class="sub" style="margin:12px 0 0;font-size:12px">En créant un compte, tu acceptes les <a href="conditions.html" target="_blank" rel="noopener">conditions d'utilisation</a> et la <a href="confidentialite.html" target="_blank" rel="noopener">politique de confidentialité</a>.</p>
- <p class="sub" style="margin:12px 0 0;font-size:12px">Max compte anonymement les écrans et outils utilisés pour s'améliorer (jamais ton stock ni tes ventes). Tu peux le refuser dans Outils &gt; Confort.</p>
+ <p class="sub" style="margin:12px 0 0;font-size:12px">Syno compte anonymement les écrans et outils utilisés pour s'améliorer (jamais ton stock ni tes ventes). Tu peux le refuser dans Outils &gt; Confort.</p>
 </div>
 <div class="card" id="au_reset" hidden>
  <h2 style="margin:0 0 4px;font-size:22px">Nouveau mot de passe</h2>

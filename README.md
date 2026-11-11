@@ -1,4 +1,4 @@
-# Max : suivi de stock et de ventes (Vinted, TikTok Live)
+# Syno : suivi de stock et de ventes (Vinted, TikTok Live)
 
 Application installable (PWA) en JavaScript, sans framework. Le code est découpé en modules, construit avec Vite et vérifié automatiquement avant chaque publication.
 
