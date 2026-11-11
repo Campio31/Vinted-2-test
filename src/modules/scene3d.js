@@ -28,22 +28,23 @@ function labelTexture(text, sub) {
     Renvoie { setPlace, setTown, setEdit, select, recenter, resize, dispose }. */
 export function createScene(T, OC, host, cb) {
   const W = () => host.clientWidth || 600, H = () => host.clientHeight || 440;
-  const renderer = new T.WebGLRenderer({ antialias: true }); renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2)); renderer.setSize(W(), H());
-  renderer.shadowMap.enabled = true; renderer.shadowMap.type = T.PCFSoftShadowMap; renderer.outputColorSpace = T.SRGBColorSpace;
+  const RB = cb.extra && cb.extra.RB, RE = cb.extra && cb.extra.RE, renderer = new T.WebGLRenderer({ antialias: true, alpha: true }); renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2)); renderer.setSize(W(), H()); renderer.setClearColor(0x000000, 0);
+  renderer.shadowMap.enabled = true; renderer.shadowMap.type = T.PCFSoftShadowMap; renderer.outputColorSpace = T.SRGBColorSpace; renderer.toneMapping = T.ACESFilmicToneMapping; renderer.toneMappingExposure = 0.92;
   host.style.position = 'relative'; host.appendChild(renderer.domElement); const dom = renderer.domElement; dom.style.cssText = 'display:block;width:100%;height:100%;touch-action:none';
-  const scene = new T.Scene(); scene.background = new T.Color(0xdde6ee);
+  const scene = new T.Scene(); host.style.background = 'linear-gradient(#8fbfe8 0%, #cfe3f2 48%, #eef3f6 100%)';
   const cam = new T.PerspectiveCamera(28, W() / H(), 0.5, 900), ctl = new OC(cam, dom);
   ctl.enableDamping = true; ctl.maxPolarAngle = 1.3; ctl.minPolarAngle = 0.25; ctl.screenSpacePanning = false;
-  scene.add(new T.HemisphereLight(0xffffff, 0xb8c4cc, 1.0));
-  const sun = new T.DirectionalLight(0xffffff, 1.3); sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048); sun.shadow.bias = -0.0005; scene.add(sun, sun.target);
+  scene.add(new T.HemisphereLight(0xeaf3ff, 0xa9b4a0, 0.7));
+  const sun = new T.DirectionalLight(0xfff1dc, 1.7); sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048); sun.shadow.bias = -0.0005; scene.add(sun, sun.target);
   const ground = new T.Mesh(new T.PlaneGeometry(1400, 1400), new T.MeshStandardMaterial({ color: 0xcfe0c4 })); ground.rotation.x = -Math.PI / 2; ground.position.y = -0.1; ground.receiveShadow = true; scene.add(ground);
   const ray = new T.Raycaster(), ndc = new T.Vector2(), gplane = new T.Plane(new T.Vector3(0, 1, 0), 0), hit = new T.Vector3(), tmp = new T.Object3D();
-  const matCache = new Map(), std = c => { let m = matCache.get(c); if (!m) { m = new T.MeshStandardMaterial({ color: c, roughness: 0.85 }); matCache.set(c, m); } return m; };
+  const matCache = new Map(), std = (c, r = 0.85, mt = 0) => { const k = c + '|' + r + '|' + mt; let m = matCache.get(k); if (!m) { m = new T.MeshStandardMaterial({ color: c, roughness: r, metalness: mt }); matCache.set(k, m); } return m; };
+  const rgeo = (w, h, d, rad) => (RB && rad ? new RB(w, h, d, 2, Math.min(rad, w / 2.2, h / 2.2, d / 2.2)) : new T.BoxGeometry(w, h, d));
   const freeGeo = g => g.traverse(o => { if (o.geometry) o.geometry.dispose(); if (o.material && o.material.userData && o.material.userData.own) { if (o.material.map) o.material.map.dispose(); o.material.dispose(); } });
 
   /* ----- état ----- */
   let mode = 'wh', data = null, town = null, framed = '', run = true, editing = false, selected = '', spans = 40, nav = null, navBig = null;
-  let shellG = null, piecesG = null, pinsG = null, labelsG = null, pinSprites = [], pieceList = [], pieceById = new Map(), townMeshes = [], itemGroups = new Map(), selBox = null, gridH = null, shellSig = '';
+  let quality = 'high', envTex = null, pmrem = null; let shellG = null, piecesG = null, pinsG = null, labelsG = null, pinSprites = [], pieceList = [], pieceById = new Map(), townMeshes = [], itemGroups = new Map(), selBox = null, gridH = null, shellSig = '';
   const transit = new Map(), tasks = [], agents = [];
   let prevBoxes = new Map(), firstPlace = true;
 
@@ -64,11 +65,16 @@ export function createScene(T, OC, host, cb) {
   const tileOf = id => { if (tiles.has(id)) return tiles.get(id); if (tileN >= MAXT) return -1; const i = tileN++; tiles.set(id, i); drawTile(i, id, null); return i; };
   const pump = () => { while (loading < 4 && photoQ.length) { const id = photoQ.shift(); loading++; Promise.resolve(cb.photoFor ? cb.photoFor(id) : null).then(img => { if (img) { const i = tiles.get(id); if (i != null) drawTile(i, id, img); } }).catch(() => {}).finally(() => { loading--; pump(); }); } };
   const wantPhoto = id => { if (photoDone.has(id)) return; photoDone.add(id); photoQ.push(id); pump(); };
-  const faceUV = (geo, face, idx) => { const uv = geo.attributes.uv, u0 = (idx % COLS) / COLS, v1 = 1 - Math.floor(idx / COLS) / COLS, u1 = u0 + 1 / COLS, v0 = v1 - 1 / COLS, o = face * 4; [[u0, v1], [u1, v1], [u0, v0], [u1, v0]].forEach(([u, v], k) => uv.setXY(o + k, u, v)); uv.needsUpdate = true; };
+  const faceUV = (geo, face, idx, w, h, mirror) => {
+    const uv = geo.attributes.uv, pos = geo.attributes.position, g = geo.groups[face], ix = geo.index; if (!g || !ix) return;
+    const u0 = (idx % COLS) / COLS, v0 = 1 - (Math.floor(idx / COLS) + 1) / COLS, seen = new Set();
+    for (let i = g.start; i < g.start + g.count; i++) { const v = ix.getX(i); if (seen.has(v)) continue; seen.add(v); let u = pos.getX(v) / w + 0.5; if (mirror) u = 1 - u; uv.setXY(v, u0 + Math.max(0, Math.min(1, u)) / COLS, v0 + Math.max(0, Math.min(1, pos.getY(v) / h + 0.5)) / COLS); }
+    uv.needsUpdate = true;
+  };
 
   /* ----- petits outils de construction ----- */
-  const bx = (g, w, h, d, c, x, y, z, cast) => { const m = new T.Mesh(new T.BoxGeometry(w, h, d), std(c)); m.position.set(x, y, z); m.castShadow = cast !== false; m.receiveShadow = true; g.add(m); return m; };
-  const label = (g, text, sub, x, y, z, sx) => { const s = new T.Sprite(new T.SpriteMaterial({ map: new T.CanvasTexture(labelTexture(text, sub)), depthTest: false })); s.scale.set(sx || 3.4, (sx || 3.4) * 0.3, 1); s.position.set(x, y, z); s.renderOrder = 4; s.material.userData.own = true; g.add(s); return s; };
+  const bx = (g, w, h, d, c, x, y, z, cast, rad, rough, metal) => { const m = new T.Mesh(rgeo(w, h, d, rad), std(c, rough == null ? 0.85 : rough, metal || 0)); m.position.set(x, y, z); m.castShadow = cast !== false; m.receiveShadow = true; g.add(m); return m; };
+  const label = (g, text, sub, x, y, z, sx) => { const s = new T.Sprite(new T.SpriteMaterial({ map: new T.CanvasTexture(labelTexture(text, sub)), depthTest: false, fog: false })); s.scale.set(sx || 3.4, (sx || 3.4) * 0.3, 1); s.position.set(x, y, z); s.renderOrder = 4; s.material.userData.own = true; g.add(s); return s; };
   const trees = (g, b, ring, n, seed) => {
     const rnd = (() => { let a = seed || 7; return () => { a = (a * 16807) % 2147483647; return a / 2147483647; }; })(), pts = [];
     for (let k = 0; k < 500 && pts.length < n; k++) { const x = b.minX - ring - 10 + rnd() * (b.maxX - b.minX + 2 * ring + 20), z = b.minZ - ring - 10 + rnd() * (b.maxZ - b.minZ + 2 * ring + 20); if (x > b.minX - ring && x < b.maxX + ring && z > b.minZ - ring && z < b.maxZ + ring) continue; pts.push([x, z, 0.8 + rnd() * 0.9]); }
@@ -82,28 +88,28 @@ export function createScene(T, OC, host, cb) {
   const furniture = it => {
     const g = new T.Group(), { w, d, h } = dims(it), WOOD = 0xc8a26b, DARK = 0x6b5a45;
     if (it.type === 'rack') {
-      [-1, 1].forEach(sx => [-1, 1].forEach(sz => bx(g, 0.09, 2.7, 0.09, 0x2f6db5, sx * (w / 2 - 0.05), 1.35, sz * (d / 2 - 0.05))));
-      [0.28, 1.2, 2.12].forEach(y => { bx(g, w, 0.04, d, 0xcfd4d9, 0, y - 0.02, 0); [-1, 1].forEach(sz => bx(g, w, 0.07, 0.07, 0xe07b2e, 0, y - 0.1, sz * (d / 2 - 0.05))); });
+      [-1, 1].forEach(sx => [-1, 1].forEach(sz => bx(g, 0.09, 2.7, 0.09, 0x2f6db5, sx * (w / 2 - 0.05), 1.35, sz * (d / 2 - 0.05), true, 0, 0.35, 0.6)));
+      [0.28, 1.2, 2.12].forEach(y => { bx(g, w, 0.04, d, 0xcfd4d9, 0, y - 0.02, 0); [-1, 1].forEach(sz => bx(g, w, 0.07, 0.07, 0xe07b2e, 0, y - 0.1, sz * (d / 2 - 0.05), true, 0, 0.4, 0.5)); });
     } else if (it.type === 'shelf') {
       bx(g, w, h, 0.04, WOOD, 0, h / 2, -d / 2 + 0.02); [-1, 1].forEach(s => bx(g, 0.04, h, d, WOOD, s * (w / 2 - 0.02), h / 2, 0)); [0.2, 0.8, 1.35, 1.9, h].forEach(y => bx(g, w, 0.04, d, WOOD, 0, y - 0.02, 0));
     } else if (it.type === 'wardrobe') {
       bx(g, w, h, 0.04, 0xe9e6e0, 0, h / 2, -d / 2 + 0.02); [-1, 1].forEach(s => bx(g, 0.04, h, d, 0xe9e6e0, s * (w / 2 - 0.02), h / 2, 0)); bx(g, w, 0.04, d, 0xe9e6e0, 0, h - 0.02, 0); bx(g, w, 0.04, d, 0xe9e6e0, 0, 0.1, 0);
       const rail = new T.Mesh(new T.CylinderGeometry(0.015, 0.015, w - 0.1, 8), std(0x9aa1a8)); rail.rotation.z = Math.PI / 2; rail.position.set(0, 1.62, 0); g.add(rail);
     } else if (it.type === 'chest') {
-      bx(g, w, h, d, 0xb98f5a, 0, h / 2, 0); [0.2, 0.5, 0.8].forEach(y => bx(g, w - 0.1, 0.02, 0.02, DARK, 0, y, d / 2 + 0.005)); bx(g, w + 0.04, 0.04, d + 0.04, 0xa77c4a, 0, h + 0.02, 0);
+      bx(g, w, h, d, 0xb98f5a, 0, h / 2, 0, true, 0.03, 0.6); [0.2, 0.5, 0.8].forEach(y => bx(g, w - 0.1, 0.02, 0.02, DARK, 0, y, d / 2 + 0.005)); bx(g, w + 0.04, 0.04, d + 0.04, 0xa77c4a, 0, h + 0.02, 0);
     } else if (it.type === 'table') {
-      bx(g, w, 0.06, d, 0xe6e9ec, 0, h, 0); [-1, 1].forEach(sx => [-1, 1].forEach(sz => bx(g, 0.06, h, 0.06, 0x8b949c, sx * (w / 2 - 0.1), h / 2, sz * (d / 2 - 0.1))));
+      bx(g, w, 0.06, d, 0xe6e9ec, 0, h, 0, true, 0.02, 0.35); [-1, 1].forEach(sx => [-1, 1].forEach(sz => bx(g, 0.06, h, 0.06, 0x8b949c, sx * (w / 2 - 0.1), h / 2, sz * (d / 2 - 0.1))));
       const tape = new T.Mesh(new T.CylinderGeometry(0.09, 0.09, 0.08, 12), std(0xe0b04a)); tape.position.set(w / 2 - 0.3, h + 0.07, d / 2 - 0.2); g.add(tape);
     } else if (it.type === 'zone' || it.type === 'dock') {
       const col = STAGE_COL[it.stage] || 0x888888, m = new T.Mesh(new T.BoxGeometry(w, 0.06, d), new T.MeshStandardMaterial({ color: col, roughness: 0.9, transparent: true, opacity: 0.5, emissive: 0x000000 })); m.position.y = 0.2; m.receiveShadow = true; g.add(m); m.userData.zoneMat = true;
       const e = new T.LineSegments(new T.EdgesGeometry(new T.BoxGeometry(w, 0.06, d)), new T.LineBasicMaterial({ color: it.type === 'dock' ? 0xf2c230 : 0x2f6db5 })); e.position.y = 0.2; g.add(e);
       if (it.type === 'dock') for (let i = -Math.floor(w / 2); i <= Math.floor(w / 2); i++) bx(g, 0.1, 0.02, d, 0xf2c230, i * 1, 0.24, 0, false);
     } else if (it.type === 'sofa') {
-      bx(g, w, 0.4, d, 0x7a6fc4, 0, 0.3, 0); bx(g, w, 0.55, 0.25, 0x6a5fb0, 0, 0.75, -d / 2 + 0.12); [-1, 1].forEach(s => bx(g, 0.25, 0.3, d, 0x6a5fb0, s * (w / 2 - 0.12), 0.65, 0));
+      bx(g, w, 0.4, d, 0x7a6fc4, 0, 0.3, 0, true, 0.1, 0.95); bx(g, w - 0.1, 0.5, 0.25, 0x6a5fb0, 0, 0.75, -d / 2 + 0.12, true, 0.1, 0.95); [-1, 1].forEach(s => bx(g, 0.25, 0.32, d, 0x6a5fb0, s * (w / 2 - 0.12), 0.65, 0, true, 0.1, 0.95)); bx(g, w - 0.7, 0.14, d - 0.35, 0x8579d6, 0, 0.58, 0.08, false, 0.06, 1);
     } else if (it.type === 'bed') {
-      bx(g, w, 0.3, d, 0x8a6a4a, 0, 0.2, 0); bx(g, w - 0.1, 0.22, d - 0.1, 0xf5f6f7, 0, 0.46, 0); bx(g, 0.5, 0.12, d - 0.4, 0xe0e6ee, -w / 2 + 0.35, 0.62, 0); bx(g, 0.08, 0.7, d, 0x8a6a4a, -w / 2, 0.5, 0);
+      bx(g, w, 0.3, d, 0x8a6a4a, 0, 0.2, 0, true, 0.04, 0.6); bx(g, w - 0.1, 0.22, d - 0.1, 0xf5f6f7, 0, 0.46, 0, true, 0.09, 1); bx(g, 0.5, 0.12, d - 0.4, 0xe0e6ee, -w / 2 + 0.35, 0.62, 0); bx(g, 0.08, 0.7, d, 0x8a6a4a, -w / 2, 0.5, 0);
     } else if (it.type === 'desk') {
-      bx(g, w, 0.05, d, 0xc8a26b, 0, 0.75, 0); [-1, 1].forEach(sx => bx(g, 0.05, 0.75, d - 0.1, 0x8a6a4a, sx * (w / 2 - 0.05), 0.37, 0)); bx(g, 0.5, 0.3, 0.04, 0x2f3a45, 0, 1.0, -0.1); bx(g, 0.06, 0.2, 0.06, 0x2f3a45, 0, 0.88, -0.1);
+      bx(g, w, 0.05, d, 0xc8a26b, 0, 0.75, 0, true, 0.015, 0.5); [-1, 1].forEach(sx => bx(g, 0.05, 0.75, d - 0.1, 0x8a6a4a, sx * (w / 2 - 0.05), 0.37, 0)); bx(g, 0.5, 0.3, 0.04, 0x2f3a45, 0, 1.0, -0.1); bx(g, 0.06, 0.2, 0.06, 0x2f3a45, 0, 0.88, -0.1);
     } else if (it.type === 'plant') {
       const pot = new T.Mesh(new T.CylinderGeometry(0.22, 0.17, 0.4, 10), std(0xb5651d)); pot.position.y = 0.2; pot.castShadow = true; g.add(pot);
       const lf = new T.Mesh(new T.IcosahedronGeometry(0.42, 0), std(0x4aa56a)); lf.position.y = 0.85; lf.castShadow = true; g.add(lf);
@@ -115,11 +121,23 @@ export function createScene(T, OC, host, cb) {
   };
 
   /* ----- les lieux : sol, murs, extérieur ----- */
+  /* ----- décor : luminaires, extincteurs, bornes, tableaux ----- */
+  const decor = (tpl, b) => {
+    const lamp = (x, z, len) => { bx(shellG, 0.06, 1.0, 0.06, 0x8b949c, x, tpl.wallH - 0.5, z, false); const m = new T.Mesh(new T.BoxGeometry(len, 0.08, 0.35), new T.MeshBasicMaterial({ color: 0xfff3cf })); m.position.set(x, tpl.wallH - 1.05, z); shellG.add(m); };
+    if (tpl.shell === 'wh') {
+      for (let x = b.minX + 5; x < b.maxX; x += 9) for (let z = b.minZ + 4; z < b.maxZ; z += 8) lamp(x, z, 2.2);
+      for (let x = b.minX + 6; x < b.maxX; x += 10) { bx(shellG, 0.22, 0.5, 0.22, 0xd23a3a, x, 1.2, b.minZ + 0.55, false, 0.05, 0.5); bx(shellG, 0.5, 0.4, 0.04, 0x4aa56a, x, 2.3, b.minZ + 0.52, false); }
+      for (let z = b.minZ + 2; z < b.maxZ; z += 6) { const bo = new T.Mesh(new T.CylinderGeometry(0.1, 0.1, 0.9, 10), std(0xf2c230, 0.6)); bo.position.set(b.minX + 0.6, 0.5, z); bo.castShadow = true; shellG.add(bo); }
+    } else {
+      (tpl.rooms || [{ x0: b.minX, x1: b.maxX, z0: b.minZ, z1: b.maxZ }]).forEach(r => lamp((r.x0 + r.x1) / 2, (r.z0 + r.z1) / 2, 1.6));
+      for (let x = b.minX + 4, k = 0; x < b.maxX - 1; x += 5, k++) bx(shellG, 1.0, 0.7, 0.04, [0xd9825b, 0x6b9bd1, 0x8dbb6a][k % 3], x, 1.65, b.minZ + 0.04, false, 0.01);
+    }
+  };
   const buildShell = () => {
     if (shellG) { scene.remove(shellG); freeGeo(shellG); }
     shellG = new T.Group(); scene.add(shellG); itemGroups = new Map(); const tpl = data.tpl, b = tpl.bounds, w = b.maxX - b.minX, d = b.maxZ - b.minZ, cx = (b.minX + b.maxX) / 2, cz = (b.minZ + b.maxZ) / 2, H = tpl.wallH;
     const floorC = tpl.shell === 'wh' ? 0xc4cacf : tpl.shell === 'room' ? 0xd9c7a8 : 0xe6e0d4;
-    bx(shellG, w + 0.4, 0.3, d + 0.4, floorC, cx, -0.05, cz, false);
+    bx(shellG, w + 0.4, 0.3, d + 0.4, floorC, cx, -0.05, cz, false, 0, tpl.shell === 'wh' ? 0.55 : 0.4, 0.05);
     if (tpl.shell === 'house') (tpl.rooms || []).forEach(r => bx(shellG, r.x1 - r.x0 - 0.05, 0.02, r.z1 - r.z0 - 0.05, r.c, (r.x0 + r.x1) / 2, 0.11, (r.z0 + r.z1) / 2, false));
     if (tpl.shell === 'wh') { const gr = new T.GridHelper(Math.max(w, d) + 2, Math.round((Math.max(w, d) + 2) / 3), 0xb3bac0, 0xb3bac0); gr.position.set(cx, 0.12, cz); shellG.add(gr); }
     const wallC = tpl.shell === 'wh' ? 0xe9ecee : 0xf2efe8, base = 0x2f6db5;
@@ -133,6 +151,7 @@ export function createScene(T, OC, host, cb) {
       const carC = [0xd23a3a, 0x3b82c4, 0xf5f6f7, 0x2f3a45, 0xe8a33d, 0x4aa56a]; bx(shellG, w + 12, 0.05, 6, 0x9aa1a8, cx, -0.04, b.maxZ + 6, false);
       carC.forEach((c, i) => { const g = new T.Group(), body = new T.Mesh(new T.BoxGeometry(2, 0.7, 4), std(c)), top = new T.Mesh(new T.BoxGeometry(1.7, 0.6, 2), std(0x9fb4c4)); body.position.y = 0.55; top.position.set(0, 1.15, -0.2); body.castShadow = true; g.add(body, top); g.position.set(b.minX + 4 + i * 3.4, 0, b.maxZ + 6); shellG.add(g); });
     }
+    decor(tpl, b);
     trees(shellG, b, tpl.shell === 'wh' ? 14 : 5, tpl.shell === 'wh' ? 34 : 18, 7);
     data.plan.items.forEach(it => { const g = furniture(it); shellG.add(g); itemGroups.set(it.id, g); });
     nav = buildNav(data.plan, tpl); navBig = buildNav(data.plan, tpl, { margin: 0.6 });
@@ -149,8 +168,8 @@ export function createScene(T, OC, host, cb) {
   const infoOf = id => cb.info(id) || {};
   const makePiece = (b, at) => {
     const info = infoOf(b.id), idx = tileOf(b.id), sc = b.sc || 1, hang = b.hang, cc = catColor(info.cat);
-    const geo = hang ? new T.BoxGeometry(0.34, 0.74, 0.05) : new T.BoxGeometry(0.5 * sc, 0.45 * sc, 0.6 * sc);
-    if (idx >= 0) { faceUV(geo, 4, idx); if (hang) faceUV(geo, 5, idx); }
+    const gw = hang ? 0.34 : 0.5 * sc, gh = hang ? 0.74 : 0.45 * sc, gd = hang ? 0.05 : 0.6 * sc, geo = rgeo(gw, gh, gd, hang ? 0.012 : 0.035 * sc);
+    if (idx >= 0) { faceUV(geo, 4, idx, gw, gh, false); if (hang) faceUV(geo, 5, idx, gw, gh, true); }
     const side = b.dim ? std(0xdcdfe2) : std(cc), top = b.dim ? std(0xdcdfe2) : std(STAGE_COL[b.stage] || 0x888888), front = b.dim || idx < 0 ? std(b.dim ? 0xdcdfe2 : cc) : photoMat;
     const mesh = new T.Mesh(geo, hang ? [side, side, side, side, front, front] : [side, side, top, side, front, side]);
     const p = at || b; mesh.position.set(p.x, hang ? p.y - 0.1 : p.y, p.z); mesh.rotation.y = p.rot || 0; mesh.castShadow = true; mesh.receiveShadow = true; mesh.userData.pieceId = b.id; mesh.userData.box = b;
@@ -165,7 +184,7 @@ export function createScene(T, OC, host, cb) {
     if (pinsG) { scene.remove(pinsG); pinsG.traverse(o => { if (o.material && o.material.map) { o.material.map.dispose(); o.material.dispose(); } }); }
     if (labelsG) { scene.remove(labelsG); freeGeo(labelsG); } labelsG = new T.Group(); scene.add(labelsG); labels();
     pinsG = new T.Group(); scene.add(pinsG); pinSprites = [];
-    data.placed.pins.forEach(p => { const s = new T.Sprite(new T.SpriteMaterial({ map: new T.CanvasTexture(pinTexture(PIN_COL[p.kind] || PIN_COL.custom, p.text)), depthTest: false })); s.center.set(0.5, 0); s.scale.set(1.0, 1.33, 1); s.position.set(p.x, p.y, p.z); s.renderOrder = 5; s.userData = p; pinsG.add(s); pinSprites.push(s); });
+    data.placed.pins.forEach(p => { const s = new T.Sprite(new T.SpriteMaterial({ map: new T.CanvasTexture(pinTexture(PIN_COL[p.kind] || PIN_COL.custom, p.text)), depthTest: false, fog: false })); s.center.set(0.5, 0); s.scale.set(1.0, 1.33, 1); s.position.set(p.x, p.y, p.z); s.renderOrder = 5; s.userData = p; pinsG.add(s); pinSprites.push(s); });
   };
   const labels = () => {
     data.plan.items.forEach(it => { const k = TYPES[it.type].kind, u = data.placed.usage[it.id]; if (k === 'decor' || !u) return; const nm = k === 'store' ? (it.bac === undefined ? (it.name || typeLabel(it.type)) : (it.bac || t('Sans bac'))) : (data.stageNames[it.stage] || it.name || typeLabel(it.type)); label(labelsG, nm, u.n + '/' + u.cap, it.x, (TYPES[it.type].h || 0.2) + 0.9, it.z, spans > 30 ? 3.2 : 2.2); });
@@ -175,9 +194,11 @@ export function createScene(T, OC, host, cb) {
   const person = role => {
     const g = new T.Group(), col = { prep: 0x3b82c4, quai: 0xff7a1a, cariste: 0x4aa56a }[role] || 0x3b82c4, mesh = (w, h, d, c) => { const m = new T.Mesh(new T.BoxGeometry(w, h, d), std(c)); m.castShadow = true; return m; };
     const body = mesh(0.38, 0.55, 0.22, col); body.position.y = 1.05; g.add(body);
+    const stripe = mesh(0.4, 0.07, 0.24, role === 'quai' ? 0xe8f3a8 : 0xdfe6ee); stripe.position.y = 1.05; g.add(stripe);
     const head = new T.Mesh(new T.SphereGeometry(0.15, 12, 10), std(0xf0c9a8)); head.position.y = 1.5; head.castShadow = true; g.add(head);
     const hat = new T.Mesh(new T.SphereGeometry(0.16, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2), std(role === 'quai' ? 0xf2c230 : 0x2f3a45)); hat.position.y = 1.54; g.add(hat);
     const limb = (x, y, w, h, c) => { const p = new T.Group(); p.position.set(x, y, 0); const m = mesh(w, h, w, c); m.position.y = -h / 2; p.add(m); g.add(p); return p; };
+    const blob = new T.Mesh(new T.CircleGeometry(0.4, 16), new T.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.22, depthWrite: false })); blob.rotation.x = -Math.PI / 2; blob.position.y = 0.02; g.add(blob);
     return { g, legL: limb(-0.1, 0.78, 0.14, 0.62, 0x2f3a45), legR: limb(0.1, 0.78, 0.14, 0.62, 0x2f3a45), armL: limb(-0.25, 1.3, 0.1, 0.5, col), armR: limb(0.25, 1.3, 0.1, 0.5, col) };
   };
   const forklift = () => {
@@ -250,12 +271,13 @@ export function createScene(T, OC, host, cb) {
     });
     trees(shellG, b, 8, 30, 11);
     if (pinsG) { scene.remove(pinsG); } pinsG = new T.Group(); scene.add(pinsG); pinSprites = [];
-    town.pins.forEach(p => { const s = new T.Sprite(new T.SpriteMaterial({ map: new T.CanvasTexture(pinTexture(PIN_COL[p.kind] || PIN_COL.custom, p.text)), depthTest: false })); s.center.set(0.5, 0); s.scale.set(1.0, 1.33, 1); s.position.set(p.x, p.y, p.z); s.renderOrder = 5; s.userData = p; pinsG.add(s); pinSprites.push(s); });
+    town.pins.forEach(p => { const s = new T.Sprite(new T.SpriteMaterial({ map: new T.CanvasTexture(pinTexture(PIN_COL[p.kind] || PIN_COL.custom, p.text)), depthTest: false, fog: false })); s.center.set(0.5, 0); s.scale.set(1.0, 1.33, 1); s.position.set(p.x, p.y, p.z); s.renderOrder = 5; s.userData = p; pinsG.add(s); pinSprites.push(s); });
     if (piecesG) { scene.remove(piecesG); piecesG = null; } pieceList = []; spans = Math.max(w, d);
   };
   const frame = bnds => {
     const cx = (bnds.minX + bnds.maxX) / 2, cz = (bnds.minZ + bnds.maxZ) / 2; spans = Math.max(bnds.maxX - bnds.minX, bnds.maxZ - bnds.minZ);
     const k = mode === 'town' ? 1.3 : spans > 30 ? 0.95 : 1.15, d = spans * k + (mode === 'town' ? 14 : 8);
+    scene.fog = quality === 'high' ? new T.Fog(0xe3edf4, spans * 2.2, spans * 7) : null;
     ctl.target.set(cx, 0.8, cz); cam.position.set(cx + d * 0.55, d * 0.62, cz + d * 0.8); ctl.minDistance = 4; ctl.maxDistance = spans * 3 + 40;
     sun.position.set(cx - spans * 0.5, spans * 0.9, cz + spans * 0.4); sun.target.position.set(cx, 0, cz); const s = sun.shadow.camera; s.left = -spans; s.right = spans; s.top = spans; s.bottom = -spans; s.near = 1; s.far = spans * 4; s.updateProjectionMatrix(); ctl.update();
   };
@@ -308,7 +330,7 @@ export function createScene(T, OC, host, cb) {
       return;
     }
     if (!down) {
-      if (ev.pointerType === 'mouse' && mode === 'wh' && !editing && ev.timeStamp - lastMove > 60) { lastMove = ev.timeStamp; const h = pick(ev); if (h && h.box) { if (tipId !== h.box.id) showTip(h.box.id, false); } else if (tipId && !tip.matches(':hover')) hideTip(); }
+      if (ev.pointerType === 'mouse' && mode === 'wh' && !editing && ev.timeStamp - lastMove > 60) { lastMove = ev.timeStamp; const h = pick(ev); dom.style.cursor = h ? 'pointer' : 'default'; if (h && h.box) { if (tipId !== h.box.id) showTip(h.box.id, false); } else if (tipId && !tip.matches(':hover')) hideTip(); }
       return;
     }
     if (Math.hypot(ev.clientX - down.x, ev.clientY - down.y) > 6) { down.moved = true; if (!drag && down.box && ev.pointerType === 'mouse') startDrag(); else if (!drag) clearTimeout(timer); }
@@ -345,7 +367,7 @@ export function createScene(T, OC, host, cb) {
   return {
     /** Lieu : d = { tpl, plan, placed, stageNames, quiet }. Les pièces dont l'étape change sont portées par un personnage. */
     setPlace(d) {
-      const wasTown = mode === 'town'; mode = 'wh'; agents.forEach(a => { a.g.visible = true; }); const sig = d.tpl.place + '|' + JSON.stringify(d.plan.items); data = d;
+      const wasTown = mode === 'town'; mode = 'wh'; agents.forEach(a => { a.g.visible = true; }); const sig = d.tpl.place + '|' + JSON.stringify(d.tpl.bounds) + '|' + JSON.stringify(d.plan.items); data = d;
       if (wasTown && townMeshes.length) { townMeshes = []; }
       const rebuild = sig !== shellSig || wasTown; if (rebuild) { shellSig = sig; buildShell(); if (agents.length === 0 || wasTown || firstPlace || agents.length !== d.tpl.roles.length) spawn(); }
       /* mouvements : on ne fait marcher quelqu'un que pour un vrai changement d'étape (pas quand on déplace un meuble) */
@@ -358,6 +380,14 @@ export function createScene(T, OC, host, cb) {
     setTown(d) { mode = 'town'; town = d; agents.forEach(a => { a.g.visible = false; }); if (labelsG) { scene.remove(labelsG); freeGeo(labelsG); labelsG = null; } hideTip(); buildTown(); if (framed !== 'town') { frame(d.bounds); framed = 'town'; } },
     setEdit(on) { editing = !!on; if (!on) selected = ''; gridOn(); outline(); },
     select(id) { selected = id; outline(); },
+    setQuality(q) {
+      quality = q === 'low' ? 'low' : 'high'; const hi = quality === 'high';
+      renderer.setPixelRatio(hi ? Math.min(window.devicePixelRatio || 1, 2) : 1); renderer.setSize(W(), H()); renderer.shadowMap.enabled = hi; sun.castShadow = hi; sun.shadow.mapSize.set(hi ? 2048 : 512, hi ? 2048 : 512); if (sun.shadow.map) { sun.shadow.map.dispose(); sun.shadow.map = null; }
+      if (hi && RE) { if (!envTex) { pmrem = new T.PMREMGenerator(renderer); envTex = pmrem.fromScene(new RE(), 0.04).texture; } scene.environment = envTex; scene.environmentIntensity = 0.4; } else scene.environment = null;
+      scene.fog = hi && data ? new T.Fog(0xe3edf4, spans * 2.2, spans * 7) : null;
+      matCache.forEach(m => { m.needsUpdate = true; }); photoMat.needsUpdate = true;
+      if (mode === 'town' && town) buildTown(); else if (data) { buildShell(); rebuildPieces(); }
+    },
     rotateSelected() { return selected && data ? rotateItem(data.plan, data.tpl, selected) : null; },
     recenter() { if (mode === 'town' && town) frame(town.bounds); else if (data) frame(data.tpl.bounds); },
     resize, dispose,

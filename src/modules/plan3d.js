@@ -36,14 +36,16 @@ export const overlaps = (a, b) => a.x0 < b.x1 - 1e-6 && a.x1 > b.x0 + 1e-6 && a.
 export const PLACES = { room: 'Une pièce', house: 'Maison', wh: 'Entrepôt' };
 const W = (x0, z0, x1, z1, h = 3) => ({ x0, z0, x1, z1, h });
 /** Murs (rectangles pleins), taille et personnages de chaque lieu. Les portes sont des trous entre deux murs. */
-export function template(place) {
-  if (place === 'room') return { place, bounds: { minX: 0, maxX: 7, minZ: 0, maxZ: 5.5 }, walls: [], roles: ['prep'], shell: 'room', wallH: 2.8 };
+export function template(place, plan) {
+  const ex = (plan && plan.ex) || 0, ez = (plan && plan.ez) || 0;   /* agrandissement (ou réduction) choisi, en mètres, vers la droite et vers le fond */
+  if (place === 'room') return { place, bounds: { minX: 0, maxX: 7 + ex, minZ: 0, maxZ: 5.5 + ez }, walls: [], roles: ['prep'], shell: 'room', wallH: 2.8 };
   if (place === 'house') return {
-    place, bounds: { minX: 0, maxX: 15, minZ: 0, maxZ: 10 }, roles: ['prep', 'quai'], shell: 'house', wallH: 2.8,
-    walls: [W(6.9, 0, 7.1, 3.6), W(6.9, 5.2, 7.1, 10), W(7.1, 4.9, 10.2, 5.1), W(11.8, 4.9, 15, 5.1)],
-    rooms: [{ n: 'Salon et chambre', x0: 0, z0: 0, x1: 7, z1: 10, c: 0xe9dcc8 }, { n: 'Bureau', x0: 7, z0: 0, x1: 15, z1: 5, c: 0xdde6ee }, { n: 'Garage', x0: 7, z0: 5, x1: 15, z1: 10, c: 0xc9ced2 }],
+    place, bounds: { minX: 0, maxX: 15 + ex, minZ: 0, maxZ: 10 + ez }, roles: ['prep', 'quai'], shell: 'house', wallH: 2.8,
+    walls: [W(6.9, 0, 7.1, 3.6), W(6.9, 5.2, 7.1, 10 + ez), W(7.1, 4.9, 10.2, 5.1), W(11.8, 4.9, 15 + ex, 5.1)],
+    rooms: [{ n: 'Salon et chambre', x0: 0, z0: 0, x1: 7, z1: 10 + ez, c: 0xe9dcc8 }, { n: 'Bureau', x0: 7, z0: 0, x1: 15 + ex, z1: 5, c: 0xdde6ee }, { n: 'Garage', x0: 7, z0: 5, x1: 15 + ex, z1: 10 + ez, c: 0xc9ced2 }],
   };
-  return { place: 'wh', bounds: { minX: 0, maxX: 42, minZ: 0, maxZ: 26 }, walls: [], roles: ['prep', 'prep', 'cariste', 'quai'], shell: 'wh', wallH: 5.2, docks: [{ x: 42, z: 5 }, { x: 42, z: 13 }, { x: 42, z: 21 }] };
+  const D = 26 + ez;
+  return { place: 'wh', bounds: { minX: 0, maxX: 42 + ex, minZ: 0, maxZ: D }, walls: [], roles: ['prep', 'prep', 'cariste', 'quai'], shell: 'wh', wallH: 5.2, docks: [0.2, 0.5, 0.8].map(f => ({ x: 42 + ex, z: Math.round(D * f) })) };
 }
 let uid = 0;
 const nid = () => 'i' + Date.now().toString(36) + (uid++).toString(36);
@@ -68,7 +70,7 @@ export function defaultPlan(place, bacs = []) {
   return { items };
 }
 /** Plan enregistré du lieu, ou plan de départ. */
-export function getPlan(crm, place, bacs) { const s = ((crm || {}).plans || {})[place]; return s && Array.isArray(s.items) ? { items: s.items.map(i => Object.assign({}, i)) } : defaultPlan(place, (bacs || []).slice()); }
+export function getPlan(crm, place, bacs) { const s = ((crm || {}).plans || {})[place]; return s && Array.isArray(s.items) ? { items: s.items.map(i => Object.assign({}, i)), ex: s.ex || 0, ez: s.ez || 0 } : defaultPlan(place, (bacs || []).slice()); }
 
 /* ---- poser, déplacer, tourner : on refuse ce qui n'est pas possible dans la vraie vie ---- */
 const wallRects = tpl => (tpl.walls || []).map(w => ({ x0: w.x0, x1: w.x1, z0: w.z0, z1: w.z1 }));
@@ -84,7 +86,7 @@ export function canPlace(plan, tpl, it) {
   if (!fl) for (const w of wallRects(tpl)) if (overlaps(r, w)) return false;
   return true;
 }
-const patch = (plan, id, f) => ({ items: plan.items.map(i => (i.id === id ? f(Object.assign({}, i)) : i)) });
+const patch = (plan, id, f) => Object.assign({}, plan, { items: plan.items.map(i => (i.id === id ? f(Object.assign({}, i)) : i)) });
 export function moveItem(plan, tpl, id, x, z) {
   const it = plan.items.find(i => i.id === id); if (!it) return null;
   const n = Object.assign({}, it, { x: snap(x), z: snap(z) });
@@ -95,7 +97,7 @@ export function rotateItem(plan, tpl, id) {
   const n = Object.assign({}, it, { rot: ((it.rot || 0) + 1) % 4 });
   return canPlace(plan, tpl, n) ? patch(plan, id, i => Object.assign(i, { rot: n.rot })) : null;
 }
-export const removeItem = (plan, id) => ({ items: plan.items.filter(i => i.id !== id) });
+export const removeItem = (plan, id) => Object.assign({}, plan, { items: plan.items.filter(i => i.id !== id) });
 export const setProps = (plan, id, p) => patch(plan, id, i => Object.assign(i, p));
 /** Ajoute un meuble au premier endroit libre en partant de (x, z) ; renvoie { plan, id } ou null s'il n'y a plus de place. */
 export function addItem(plan, tpl, type, x, z, extra) {
@@ -103,7 +105,7 @@ export function addItem(plan, tpl, type, x, z, extra) {
   for (let r = 0; r <= 40; r++) for (let dx = -r; dx <= r; dx++) for (let dz = -r; dz <= r; dz++) {
     if (Math.max(Math.abs(dx), Math.abs(dz)) !== r) continue;
     const it = Object.assign({}, base, { x: snap(cx + dx * CELL), z: snap(cz + dz * CELL) });
-    if (canPlace(plan, tpl, it)) return { plan: { items: [...plan.items, it] }, id: it.id };
+    if (canPlace(plan, tpl, it)) return { plan: Object.assign({}, plan, { items: [...plan.items, it] }), id: it.id };
   }
   return null;
 }
@@ -221,4 +223,16 @@ export function advance(w, dt) {
   const t = w.path[0], dx = t.x - w.x, dz = t.z - w.z, d = Math.hypot(dx, dz), step = w.speed * dt;
   if (d <= step) { w.x = t.x; w.z = t.z; w.path.shift(); return !w.path.length; }
   w.x += dx / d * step; w.z += dz / d * step; w.rot = Math.atan2(dx, dz); return false;
+}
+
+/* ---- agrandir ou réduire le lieu ---- */
+export const SIZE_LIMITS = { minW: 5, minD: 4, maxW: 90, maxD: 70, step: 2 };
+/** Taille du lieu en mètres. */
+export function sizeOf(place, plan) { const b = template(place, plan).bounds; return { w: b.maxX - b.minX, d: b.maxZ - b.minZ }; }
+/** Change la largeur (dw) et la profondeur (dd) du lieu ; refuse si un meuble ne tient plus ou si on sort des limites. */
+export function resizePlan(plan, place, dw, dd) {
+  const n = Object.assign({}, plan, { ex: (plan.ex || 0) + dw, ez: (plan.ez || 0) + dd }), s = sizeOf(place, n), L = SIZE_LIMITS;
+  if (s.w < L.minW || s.d < L.minD || s.w > L.maxW || s.d > L.maxD) return null;
+  const tpl = template(place, n);
+  return n.items.every(it => canPlace(n, tpl, it)) ? n : null;
 }

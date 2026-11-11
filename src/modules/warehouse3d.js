@@ -3,7 +3,7 @@ import { $, LSg, LSs, esc, eur, sold, title } from './core.js';
 import { contacts, expired, inPipeline, moveTo, slowParcel, stageOf, stages } from './crm.js';
 import { go } from './nav.js';
 import { phBlob } from './photos.js';
-import { PLACES, STORE_STAGES, TYPES, addItem, dupItem, getPlan, placePieces, removeItem, rotateItem, setProps, template } from './plan3d.js';
+import { PLACES, SIZE_LIMITS, STORE_STAGES, TYPES, addItem, dupItem, getPlan, placePieces, removeItem, resizePlan, rotateItem, setProps, sizeOf, template } from './plan3d.js';
 
 /* ---------- Entrepôt 3D : ton stock vu comme un vrai lieu, que tu aménages toi-même ---------- */
 /* Trois lieux (une pièce, une maison, un entrepôt) ; tu poses et déplaces les meubles comme dans la vraie vie. Chaque pièce est rangée sur le meuble de son bac
@@ -34,7 +34,8 @@ export function layoutTown(C, o = {}) {
    Toucher une pièce ouvre sa fiche par-dessus : on la ferme et la 3D est exactement comme avant. */
 let glOk = null;
 export const canGL = () => { if (glOk === null) { try { const c = document.createElement('canvas'); glOk = !!(c.getContext('webgl') || c.getContext('experimental-webgl')); } catch (e) { glOk = false; } } return glOk; };
-const FS = { m: '', c: '', b: '', al: true, view: LSg('whView', 'wh'), edit: false, sel: '' };
+const coarse = () => { try { return matchMedia('(pointer:coarse)').matches; } catch (e) { return false; } };
+const FS = { m: '', c: '', b: '', al: true, view: LSg('whView', 'wh'), edit: false, sel: '', full: false, q: LSg('whQ', coarse() ? 'low' : 'high') };
 const S = { host: null, sc: null, loading: false, failed: false, sig: '' };
 const crmCfg = () => app.cfg.crm || {};
 const saveCrm = patch => app.setCfg({ crm: Object.assign({}, crmCfg(), patch) });
@@ -62,25 +63,26 @@ export const signature = P => P.filter(inPipeline).map(p => p.id + ':' + stageOf
 
 export function whPanel() {
   const wh = FS.view === 'wh', place = placeNow();
-  return `<div class="chips" style="margin-bottom:8px"><button type="button" class="chip sm${wh ? ' on' : ''}" data-whv="wh">${t('Lieu de stockage')}</button><button type="button" class="chip sm${wh ? '' : ' on'}" data-whv="town">${t('Quartier des acheteurs')}</button>${wh ? `<button type="button" class="chip sm${FS.al ? ' on' : ''}" id="wh_al">${t('Alertes')}</button>` : ''}<button type="button" class="chip sm" id="wh_rc">${t('Recentrer')}</button></div>
+  return `<div id="wh_wrap" class="whw${FS.full ? ' whfs' : ''}"><div class="chips" style="margin-bottom:8px"><button type="button" class="chip sm${wh ? ' on' : ''}" data-whv="wh">${t('Lieu de stockage')}</button><button type="button" class="chip sm${wh ? '' : ' on'}" data-whv="town">${t('Quartier des acheteurs')}</button>${wh ? `<button type="button" class="chip sm${FS.al ? ' on' : ''}" id="wh_al">${t('Alertes')}</button>` : ''}<button type="button" class="chip sm" id="wh_rc">${t('Recentrer')}</button><button type="button" class="chip sm${FS.full ? ' on' : ''}" id="wh_fs">${t(FS.full ? 'Quitter le plein écran' : 'Plein écran')}</button><button type="button" class="chip sm" id="wh_q" data-q="${FS.q}">${t(FS.q === 'high' ? 'Graphismes : élevés' : 'Graphismes : légers')}</button></div>
    ${wh ? `<div class="chips" style="margin-bottom:8px">${Object.keys(PLACES).map(k => `<button type="button" class="chip sm${place === k ? ' on' : ''}" data-whp="${k}">${t(PLACES[k])}</button>`).join('')}<button type="button" class="chip sm${FS.edit ? ' on' : ''}" id="wh_ed">${t(FS.edit ? 'Terminer la modification' : 'Modifier le plan')}</button></div>` : ''}
    <div class="chips whc">${wh ? `<select id="wh_m" aria-label="${esc(t('Marque'))}"><option value="">${t('Toutes les marques')}</option>${uniqP(p => p.marque).map(x => `<option value="${esc(x)}"${FS.m === x ? ' selected' : ''}>${esc(x)}</option>`).join('')}</select>
    <select id="wh_c" aria-label="${esc(t('Catégorie'))}"><option value="">${t('Toutes les catégories')}</option>${uniqP(p => p.cat).map(x => `<option value="${esc(x)}"${FS.c === x ? ' selected' : ''}>${esc(tv(x))}</option>`).join('')}</select>` : ''}
    <input type="search" id="wh_b" value="${esc(FS.b)}" placeholder="${esc(t(wh ? 'Chercher une pièce, un code, un acheteur' : 'Chercher un acheteur (@pseudo)'))}" autocomplete="off" autocapitalize="none"></div>
    <div id="wh_slot" class="wh3d"></div><div id="wh_m2" class="hint"></div>
    <div id="wh_edit">${wh ? editHTML() : ''}</div>
-   <p class="hint">${t(wh ? (FS.edit ? 'Glisse un meuble pour le déplacer : il se cale sur la grille de 50 cm et refuse de passer à travers un autre meuble ou un mur.' : 'Touche un colis pour voir son nom, un second toucher ouvre la fiche. Maintiens un colis et glisse-le vers une zone ou un meuble pour le faire avancer : un personnage le porte.') : 'Un immeuble par acheteur : plus il achète, plus il est haut. Touche un immeuble pour ouvrir sa fiche.')}</p>`;
+   <p class="hint">${t(wh ? (FS.edit ? 'Glisse un meuble pour le déplacer : il se cale sur la grille de 50 cm et refuse de passer à travers un autre meuble ou un mur.' : 'Touche un colis pour voir son nom, un second toucher ouvre la fiche. Maintiens un colis et glisse-le vers une zone ou un meuble pour le faire avancer : un personnage le porte.') : 'Un immeuble par acheteur : plus il achète, plus il est haut. Touche un immeuble pour ouvrir sa fiche.')}</p></div>`;
 }
 /** Barre d'édition : ajouter un meuble, et réglages du meuble choisi. */
 function editHTML() {
   if (!FS.edit) return '';
   const plan = currentPlanSilent(), it = plan.items.find(i => i.id === FS.sel), K = it && TYPES[it.type].kind;
-  const bacs = uniqP(p => p.bac || p.ballot);
+  const bacs = uniqP(p => p.bac || p.ballot), sz = sizeOf(placeNow(), plan);
   return `<div class="card cxdup"><div class="chips whc"><select id="wh_type" aria-label="${esc(t('Meuble'))}">${Object.keys(TYPES).map(k => `<option value="${k}">${esc(t(TYPES[k].n))}</option>`).join('')}</select><button type="button" class="chip sm" id="wh_add">${t('Ajouter')}</button></div>
    ${it ? `<div class="hint" style="margin:8px 0 4px"><b>${esc(t(TYPES[it.type].n))}</b></div>
    ${K === 'store' ? `<div class="fld"><label class="l" for="wh_bacin">${t('Bac rangé ici')}</label><input type="text" id="wh_bacin" list="wh_bacl" value="${esc(it.bac === undefined ? '' : it.bac)}" placeholder="${esc(t('(libre)'))}" autocomplete="off"><datalist id="wh_bacl">${bacs.map(b => `<option value="${esc(b)}">`).join('')}</datalist></div>` : ''}
    ${K === 'stage' ? `<div class="fld"><label class="l" for="wh_stg">${t('Étape')}</label><select id="wh_stg">${stages().filter(s => !STORE_STAGES.includes(s[0])).map(s => `<option value="${esc(s[0])}"${it.stage === s[0] ? ' selected' : ''}>${esc(s[1])}</option>`).join('')}</select></div>` : ''}
    <div class="chips" style="margin-top:6px"><button type="button" class="chip sm" id="wh_rot">${t('Tourner')}</button><button type="button" class="chip sm" id="wh_dup">${t('Dupliquer')}</button><button type="button" class="chip sm" id="wh_del">${t('Supprimer')}</button></div>` : `<div class="hint" style="margin-top:8px">${t('Touche un meuble pour le régler.')}</div>`}
+   <div class="hint" style="margin:10px 0 4px"><b>${t('Taille du lieu')}</b> : ${sz.w} × ${sz.d} m</div><div class="chips"><button type="button" class="chip sm" data-whz="-w">${t('Largeur')} −</button><button type="button" class="chip sm" data-whz="+w">${t('Largeur')} +</button><button type="button" class="chip sm" data-whz="-d">${t('Profondeur')} −</button><button type="button" class="chip sm" data-whz="+d">${t('Profondeur')} +</button></div>
    <div class="chips" style="margin-top:8px"><button type="button" class="chip sm" id="wh_reset">${t('Remettre le plan de départ')}</button></div></div>`;
 }
 const currentPlanSilent = () => getPlan(crmCfg(), placeNow(), uniqP(p => p.bac || p.ballot));
@@ -96,7 +98,7 @@ const photoFor = id => { const p = app.P.find(x => x.id === id); return p && p.p
 function refresh() {
   if (!S.sc) return; S.sig = sigNow();
   if (FS.view === 'town') { const d = layoutTown(contacts(), { keep: keepC }); S.sc.setTown(d); const m = $('wh_m2'); if (m) m.textContent = d.total > d.shown ? t('{n} acheteurs affichés sur {m}', { n: d.shown, m: d.total }) : ''; return; }
-  const place = placeNow(), tpl = template(place), plan = currentPlan(), quiet = !!S.quiet; S.quiet = false;
+  const place = placeNow(), plan = currentPlan(), tpl = template(place, plan), quiet = !!S.quiet; S.quiet = false;
   const placed = placePieces(app.P, plan, { inPipeline, stageOf, expired, slowParcel, title, keep: keepP });
   if (!FS.al) placed.pins = placed.pins.filter(p => p.kind !== 'alert');
   S.sc.setPlace({ tpl, plan, placed, stageNames: Object.fromEntries(stages().map(s => [s[0], s[1]])), quiet });
@@ -115,7 +117,7 @@ export async function whMount(slot) {
   if (S.failed) return fail(t('La 3D n\'est pas disponible sur cet appareil.'));
   slot.innerHTML = `<div class="hint" style="padding:16px">${t('Chargement de la 3D…')}</div>`;
   if (S.loading) return; S.loading = true;
-  let T, OC; try { [T, { OrbitControls: OC }] = await Promise.all([import('three'), import('three/examples/jsm/controls/OrbitControls.js')]); } catch (e) { return fail(t('La 3D n\'a pas pu se charger : vérifie ta connexion puis réessaie.')); }
+  let T, OC, X = {}; try { let RB, RE; [T, { OrbitControls: OC }, { RoundedBoxGeometry: RB }, { RoomEnvironment: RE }] = await Promise.all([import('three'), import('three/examples/jsm/controls/OrbitControls.js'), import('three/examples/jsm/geometries/RoundedBoxGeometry.js'), import('three/examples/jsm/environments/RoomEnvironment.js')]); X = { RB, RE }; } catch (e) { return fail(t('La 3D n\'a pas pu se charger : vérifie ta connexion puis réessaie.')); }
   const { createScene } = await import('./scene3d.js');
   S.host = document.createElement('div'); S.host.style.cssText = 'width:100%;height:100%';
   const cur = $('wh_slot'); if (!cur) { S.loading = false; return; } cur.innerHTML = ''; cur.appendChild(S.host);
@@ -125,6 +127,7 @@ export async function whMount(slot) {
       onSelect: id => { FS.sel = id; renderEdit(); },
       onPlan: commitPlan,
       onPick: h => { if (h.box) return app.openSheet(h.box.id); if (h.building) return app.openContact(h.building); if (h.pin.pieceId) return app.openSheet(h.pin.pieceId); if (h.pin.buyerKey) return app.openContact(h.pin.buyerKey); if (h.pin.zoneId) app.toast(t('{n} pièce(s) : {z}', { n: h.pin.text, z: h.pin.label })); },
+      quality: FS.q, extra: X,
       onDrop: (id, target) => {
         const p = app.P.find(x => x.id === id); if (!p) return; const it = currentPlanSilent().items.find(i => i.id === target), k = it && TYPES[it.type].kind;
         if (k === 'stage') moveTo(id, it.stage);
@@ -133,19 +136,30 @@ export async function whMount(slot) {
       },
     });
   } catch (e) { return fail(t('La 3D n\'est pas disponible sur cet appareil.')); }
-  S.loading = false; S.sc.setEdit(FS.edit && FS.view === 'wh'); refresh();
+  S.loading = false; S.sc.setQuality(FS.q); S.sc.setEdit(FS.edit && FS.view === 'wh'); refresh();
   setInterval(() => { if (S.host && S.host.isConnected && sigNow() !== S.sig) refresh(); }, 900);
 }
 let armed = 0;
+/** Plein écran : la zone 3D (avec ses boutons) couvre tout l'écran ; on demande aussi le plein écran du navigateur quand il existe. */
+function setFull(on) {
+  FS.full = !!on; document.body.classList.toggle('whfs-on', FS.full);
+  try { if (FS.full && document.documentElement.requestFullscreen) { const r = document.documentElement.requestFullscreen(); if (r && r.catch) r.catch(() => {}); } else if (!FS.full && document.fullscreenElement && document.exitFullscreen) { const r = document.exitFullscreen(); if (r && r.catch) r.catch(() => {}); } } catch (e) { /* plein écran du navigateur indisponible : la version intégrée suffit */ }
+  if (app.crmSub) app.crmSub('3d'); if (S.sc) setTimeout(() => S.sc.resize(), 60);
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && FS.full) setFull(false); });
+document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement && FS.full) setFull(false); });
 document.addEventListener('click', e => {
   const c = e.target.closest && e.target.closest.bind(e.target); if (!c) return;
+  if (c('#wh_fs')) return setFull(!FS.full);
+  if (c('#wh_q')) { FS.q = FS.q === 'high' ? 'low' : 'high'; LSs('whQ', FS.q); if (S.sc) S.sc.setQuality(FS.q); const b = $('wh_q'); if (b) b.textContent = t(FS.q === 'high' ? 'Graphismes : élevés' : 'Graphismes : légers'); return; }
   const v = c('[data-whv]'); if (v && $('wh_slot')) { FS.view = v.dataset.whv; LSs('whView', FS.view); return app.crmSub && app.crmSub('3d'); }
   const pl = c('[data-whp]'); if (pl && $('wh_slot')) { FS.sel = ''; saveCrm({ place: pl.dataset.whp }); return app.crmSub && app.crmSub('3d'); }
   if (c('#wh_ed')) { FS.edit = !FS.edit; FS.sel = ''; return app.crmSub && app.crmSub('3d'); }
   if (c('#wh_al')) { FS.al = !FS.al; c('#wh_al').classList.toggle('on', FS.al); return refresh(); }
   if (c('#wh_rc') && S.sc) return S.sc.recenter();
   if (!$('wh_edit') || !FS.edit) return;
-  const tpl = template(placeNow()), plan = currentPlanSilent();
+  const plan = currentPlanSilent(), tpl = template(placeNow(), plan);
+  const zb = c('[data-whz]'); if (zb) { const [sg, ax] = [zb.dataset.whz[0], zb.dataset.whz[1]], dl = (sg === '+' ? 1 : -1) * SIZE_LIMITS.step, n = resizePlan(plan, placeNow(), ax === 'w' ? dl : 0, ax === 'd' ? dl : 0); if (!n) return app.toast(t('Impossible : un meuble ne tiendrait plus, ou le lieu serait trop petit ou trop grand.')); S.quiet = true; commitPlan(n); if (S.sc) S.sc.recenter(); return; }
   if (c('#wh_add')) { const r = addItem(plan, tpl, $('wh_type').value, undefined, undefined, TYPES[$('wh_type').value].kind === 'stage' && $('wh_type').value !== 'table' ? { stage: 'offre' } : {}); if (!r) return app.toast(t('Plus de place pour ce meuble.')); FS.sel = r.id; commitPlan(r.plan); if (S.sc) S.sc.select(r.id); return; }
   if (!FS.sel) return;
   if (c('#wh_rot')) { const n = rotateItem(plan, tpl, FS.sel); return n ? commitPlan(n) : app.toast(t('Il n\'y a pas la place de tourner ce meuble.')); }
