@@ -90,6 +90,7 @@ import './modules/account.js';
 import './modules/a11y.js';
 import './modules/auth-guard.js';
 import './modules/bilan-tabs.js';
+import './modules/live-view.js';
 import './modules/fiches-hub.js';
 import './modules/setup-wizard.js';
 import './modules/tutorial.js';
