@@ -1,63 +1,35 @@
-# Syno : suivi de stock et de ventes (Vinted, TikTok Live)
+# Serveur Live connecté (squelette)
 
-Application installable (PWA) en JavaScript, sans framework. Le code est découpé en modules, construit avec Vite et vérifié automatiquement avant chaque publication.
+Ce dossier contient ce qu'il faut **côté serveur** pour que Syno lise les ventes d'une boutique TikTok Shop sans téléchargement ni saisie.
+**Rien ici n'est déployé ni testé contre une vraie plateforme.** C'est un point de départ écrit d'après `docs/Max-Live-Spec-Technique.md`.
+Le moteur de référence, lui, est testé : `src/modules/live-core.js` (tests `tests/v60-live-core.test.js`).
 
-## Version test et version publiée
+| Fichier | Rôle | État |
+|---|---|---|
+| `migrations/001_live.sql` | Tables, contraintes d'unicité, cloisonnement par espace (RLS) | Écrit, jamais exécuté |
+| `shared/contract.ts` | Forme canonique des commandes, lignes, écritures et du connecteur | Contrat |
+| `functions/live-oauth-callback` | Retour du consentement vendeur, échange du code, vérification de la boutique | Squelette (renvoie 501) |
+| `functions/live-webhook` | Réception des notifications : signature, idempotence, mise en file | Squelette (501 tant qu'aucun vérificateur n'existe) |
+| `functions/live-sync-worker` | Traitement des jobs, relecture de l'état courant, rattrapage | Squelette |
 
-Un second site (dépôt dont le nom finit par -test) sert à essayer chaque nouveauté avec des données séparées ; quand il te convient, tu publies les mêmes fichiers sur le site principal. Voir docs/TEST.md.
+## Avant d'aller plus loin (spécification, section 5, étape P0)
+1. Un compte **TikTok Partner Center** correspondant au cas SaaS public, avec les portées utiles au marché français. Je ne crée aucun compte à ta place.
+2. L'**autorisation vendeur** de TikTok Shop pour la seconde main (catégorie soumise à un parcours d'autorisation : la validation de l'application ne la donne pas aux vendeurs).
+3. Des appels autorisés avec des données de recette (commande, live, ligne, variante, annulation, écriture de règlement) et des **fixtures anonymisées** qui représentent les vraies réponses.
+4. Whatnot : une réponse officielle sur l'enregistrement d'une application tierce **avant** toute promesse. Pas de collecte de jetons personnels.
 
-## Si tu veux publier sans rien installer
+## Règles de sécurité à tenir
+- Secrets (secret d'application, jetons) uniquement côté serveur ou coffre. `provider_credentials` n'a **aucune** politique d'accès : le front n'y touche jamais.
+- Ne rien demander sur les acheteurs (noms, adresses) ni la portée « expédition » en V1 ; exclure les informations acheteurs des journaux ; limiter la conservation des charges utiles.
+- À la déconnexion : arrêter les jobs, supprimer les identifiants, traiter les données selon les obligations du fournisseur et la politique annoncée au vendeur.
 
-Lis `docs/PUBLIER.md` : tu envoies ces fichiers sur GitHub, et GitHub vérifie puis publie le site tout seul. Si la vérification échoue, **l'ancienne version reste en ligne**.
-
-## Organisation
-
+## Déploiement (quand les accès sont obtenus)
+```bash
+supabase db push                      # applique migrations/001_live.sql sur un projet de TEST
+supabase functions deploy live-webhook live-oauth-callback live-sync-worker
 ```
-index.html            la page (le contenu des écrans)
-public/               fichiers servis tels quels : config.js, i18n.js, vintage.js, vendor/, icons/, fonts/, sw.js
-src/
-  main.js             liste les modules dans l'ordre de chargement
-  state.js            le « registre » app : l'état partagé (stock, réglages, vue…)
-  monitoring.js       suivi des erreurs (Sentry)
-  styles.css
-  modules/            un fichier par fonction de l'appli (ex. group-sale.js, supplies-planning.js…)
-tests/                tests automatiques (démarrage, tous les écrans, ventes, Sentry)
-admin.html            page d'administration (voir docs/ADMIN.md), avec src/admin.js
-docs/                 guides (synchronisation, notifications, Sentry, publication, administration)
-supabase/             fonction serveur des rappels
-```
+Variables : `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, et les identifiants d'application de chaque plateforme (jamais dans le dépôt).
+Planifier `live-sync-worker` toutes les minutes pour le rattrapage.
 
-### Comment les modules se parlent
-
-* Un module **exporte** ce dont les autres ont besoin et **importe** ce qu'il utilise : `import { eur } from './core.js'`.
-* Une valeur qui **change** (le stock `P`, les réglages `cfg`, l'onglet `view`…) se lit et s'écrit dans le registre : `app.P`, `app.cfg`.
-* Une fonction qu'un autre module **enveloppe** (`save`, `renderDash`, `renderAll`, `openSheet`, `toast`, `setCfg`…) s'appelle aussi par le registre : `app.save(p)`. Pour l'étendre : `const avant = app.save; app.save = function (p) { …; return avant(p) }`.
-* Les modules se chargent dans l'ordre de `src/main.js`. Un module ne doit utiliser **au chargement** que les modules placés avant lui ; dans une fonction, il peut appeler n'importe lequel (via `app`).
-
-## Commandes
-
-Il faut Node.js 22 ou plus (nodejs.org). Une fois :
-
-```
-npm install
-```
-
-| Commande | Effet |
-|---|---|
-| `npm run dev` | lance l'appli en local (adresse affichée) avec rechargement automatique |
-| `npm run lint` | cherche un nom qui n'existe plus, un doublon, une valeur importée modifiée |
-| `npm test` | démarre l'appli dans un faux navigateur et ouvre chaque écran, fait une vente groupée, etc. |
-| `npm run build` | construit le site dans `dist/` |
-| `npm run check` | les trois à la suite : à lancer avant d'envoyer |
-
-## Ajouter une fonction
-
-1. Crée `src/modules/ma-fonction.js` avec ses imports.
-2. Ajoute `import './modules/ma-fonction.js';` dans `src/main.js`, après les modules dont elle dépend.
-3. Pour un outil : ajoute une entrée à `TOOLS` et une ligne dans `openTool` (voir `tools-register.js`).
-4. Ajoute son nom dans la liste de `tests/screens.test.js` pour qu'elle soit ouverte à chaque vérification.
-5. `npm run check`.
-
-## Suivi des erreurs
-
-Voir `docs/SENTRY.md`. Sans clé DSN dans `public/config.js`, rien n'est chargé ni envoyé.
+## Décision GO / NO-GO (spécification, critère 10)
+V1 commercialisable pour **une** plateforme seulement quand : le parcours de connexion multi-vendeurs est autorisé, au moins un live réel a été rapproché avec le relevé de la boutique, et les limites du bilan sont visibles dans l'interface. En attendant : démonstration avec données de test.
