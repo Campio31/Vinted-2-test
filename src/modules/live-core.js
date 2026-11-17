@@ -31,7 +31,7 @@ export function normalizeLine(provider, accountId, raw) {
   return {
     accountId, orderId: String(raw.orderId), lineId: String(raw.lineId), variantId: raw.variantId == null ? null : String(raw.variantId), listingId: raw.listingId == null ? null : String(raw.listingId),
     merchantSku: raw.merchantSku || null, externalLiveId: liveId, source: liveId ? 'live' : raw.live === false ? 'non_live' : 'unknown', quantity: Math.max(1, +raw.quantity || 1),
-    status: mapStatus(provider, raw.status), rawStatus: String(raw.status == null ? '' : raw.status), gross: raw.gross == null ? null : toMinor(raw.gross), providerUpdatedAt: raw.updatedAt || null, restock: !!raw.restock, soldAt: raw.soldAt || (raw.updatedAt || '').slice(0, 10) || null,
+    status: mapStatus(provider, raw.status), rawStatus: String(raw.status == null ? '' : raw.status), gross: raw.gross == null ? null : toMinor(raw.gross), providerUpdatedAt: raw.updatedAt || null, restock: !!raw.restock, summary: !!raw.summary, soldAt: raw.soldAt || (raw.updatedAt || '').slice(0, 10) || null,
   };
 }
 export const lineKey = l => l.accountId + '|' + l.orderId + '|' + l.lineId;
@@ -87,7 +87,7 @@ export function attribute(s, line) {
   }
   const ov = [...s.overrides].reverse().find(o => o.lineKey === lineKey(line));
   if (ov) { if (ov.newTarget && ov.newTarget.ballotId !== undefined) { out.ballotId = ov.newTarget.ballotId; out.status = 'ok'; out.reason = 'correction'; } if (ov.newTarget && ov.newTarget.target) { out.target = ov.newTarget.target; out.status = 'ok'; } }
-  if (out.status === 'ok' && !out.target && !out.ballotId) { out.status = 'to_match'; out.reason = line.source === 'non_live' ? 'hors_live_sans_cible' : 'cible_inconnue'; }
+  if (out.status === 'ok' && !out.target && !out.ballotId && !line.summary) { out.status = 'to_match'; out.reason = line.source === 'non_live' ? 'hors_live_sans_cible' : 'cible_inconnue'; }
   return out;
 }
 
