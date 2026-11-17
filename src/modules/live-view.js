@@ -3,6 +3,7 @@ import { $, esc, eur, fd } from './core.js';
 import { TI, TOOLS, sheetHead, showSheet } from './tools-index.js';
 import { DEMO_ACCOUNT, loadDemo, replayDemo } from './live-demo.js';
 import * as C from './live-core.js';
+import { importExport } from './live-import.js';
 
 /* ---------- Live connecté : écrans ---------- */
 /* Connexions, Lives, Ballots, À rapprocher. Les données vivent dans les réglages synchronisés (cfg.liveco). Tant que le serveur Live n'est pas en place (dossier server/),
@@ -32,12 +33,20 @@ function tabsHTML(s) {
 }
 function connHTML(s) {
   const demo = s.accounts.some(a => a.id === DEMO_ACCOUNT);
-  const acc = s.accounts.map(a => `<div class="card"><h3>${esc(a.shop || t(PROV[a.provider]))}${pill(a.status === 'reconnect' ? t('À reconnecter') : a.provider === 'test' ? t('Test') : t('Connecté'), a.status === 'reconnect' ? '#E24B4A' : a.provider === 'test' ? '#9AA0A6' : '#1D9E75')}</h3>
+  const acc = s.accounts.map(a => `<div class="card"><h3>${esc(a.shop || t(PROV[a.provider]))}${pill(a.status === 'reconnect' ? t('À reconnecter') : a.manual ? t('Import de fichier') : a.provider === 'test' ? t('Test') : t('Connecté'), a.status === 'reconnect' ? '#E24B4A' : a.provider === 'test' || a.manual ? '#9AA0A6' : '#1D9E75')}</h3>
     <p class="sub">${esc(t(PROV[a.provider]))} · ${esc(a.market || '')}${a.lastSync ? ' · ' + t('dernière synchro le {d}', { d: fd(String(a.lastSync).slice(0, 10)) }) : ''}</p>
     ${C.CAPS.map(c => `<div style="display:flex;justify-content:space-between;font-size:14px;margin:3px 0"><span>${t(LV[c])}</span><b>${t(LEVEL[C.capLevel(a, c)])}</b></div>`).join('')}
     <div class="hint" style="margin-top:6px">${C.stockSyncActive(a) ? t('Synchro du stock active') : t('Lecture seule : le stock se met à jour dans Syno, pas sur la plateforme.')}</div></div>`).join('');
   const stock = Object.entries(s.variants).map(([id, v]) => `<div style="display:flex;justify-content:space-between;gap:8px;font-size:14px;margin:4px 0"><span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(v.label)}</span><b style="font-variant-numeric:tabular-nums;color:${v.onHand < 0 ? 'var(--red)' : 'inherit'}">${v.onHand}${v.reserved ? ' · ' + t('{n} réservée(s)', { n: v.reserved }) : ''}</b></div>`).join('');
-  return `<p class="sub">${t('Syno lit tes ventes en lecture seule. La diffusion, les expéditions et les annulations restent sur la plateforme.')}</p>${acc}
+  const R = view.report, rmsg = !R ? '' : R.error ? (R.error === 'colonnes_introuvables' ? t('Colonnes introuvables : il faut au moins le numéro de commande et la référence (ou le nom) du produit. Colonnes lues : {c}', { c: (R.headers || []).join(', ') || '—' }) : R.error === 'fichier_vide' ? t('Le fichier est vide.') : t('Aucune commande exploitable dans ce fichier.'))
+    : t('{n} commande(s) lue(s) sur {r} ligne(s).', { n: R.lines, r: R.rows }) + (R.skipped.length ? ' ' + t('{n} ligne(s) ignorée(s) (sans numéro de commande ou sans référence).', { n: R.skipped.length }) : '') + (R.noAmount ? ' ' + t('{n} ligne(s) sans montant lisible.', { n: R.noAmount }) : '') + (R.unknownStatus.length ? ' ' + t('Statuts non reconnus : {s}. Ces lignes ne touchent pas au stock.', { s: R.unknownStatus.join(', ') }) : '');
+  const imp = `<div class="card"><h3>${t('Importer un export de commandes')}</h3><p class="sub">${t('Dans le Seller Center TikTok Shop, exporte tes commandes en CSV (si ton export est un fichier Excel, enregistre-le d\'abord en CSV), puis choisis le fichier ici. Rien ne quitte cet appareil et réimporter le même fichier ne crée pas de doublon.')}</p>
+    <div class="fld"><input type="file" id="lv_f" accept=".csv,text/csv,text/plain"></div>
+    <div class="fld"><select id="lv_m"><option value="one">${t('Ces commandes viennent d\'un seul live')}</option><option value="none">${t('Ce ne sont pas des ventes de live')}</option></select></div>
+    <div class="fld"><input type="text" id="lv_t" placeholder="${t('Nom du live (ex. Live du 10 novembre)')}" autocomplete="off"></div>
+    <div class="hint" style="margin-bottom:8px">${t('Si ton fichier contient une colonne « Live », elle est utilisée à la place.')}</div>
+    <button type="button" class="btn mint" data-lv="import" style="width:100%">${t('Importer')}</button>${rmsg ? `<div class="hint" id="lv_ir" style="margin-top:8px">${esc(rmsg)}</div>` : ''}</div>`;
+  return `<p class="sub">${t('Syno lit tes ventes en lecture seule. La diffusion, les expéditions et les annulations restent sur la plateforme.')}</p>${acc}${imp}
   <div class="card"><h3>${t('Ajouter une boutique')}</h3><button type="button" class="btn sec" data-lv="tiktok" style="width:100%">${t('Connecter TikTok Shop')}</button><div class="hint" id="lv_tt" style="margin-top:8px" hidden>${t('La connexion de ta boutique demande un serveur Live (dossier server/), un compte développeur TikTok Shop validé et l\'autorisation vendeur pour la seconde main. Elle n\'est pas encore ouverte : tes données ne quittent pas cet appareil.')}</div>
   <div class="hint" style="margin-top:8px">${t('Whatnot n\'apparaît pas tant que son accès pour les applications tierces n\'est pas confirmé.')}</div></div>
   <div class="card"><h3>${t('Démonstration')}</h3><p class="sub">${t('Des commandes simulées pour essayer les écrans. Elles ne touchent jamais à tes fiches.')}</p><div class="acts" style="margin:0">${demo ? `<button type="button" class="btn sec" data-lv="replay">${t('Rejouer les notifications')}</button><button type="button" class="btn sec" data-lv="undemo">${t('Supprimer la démonstration')}</button>` : `<button type="button" class="btn mint" data-lv="demo">${t('Charger la démonstration')}</button>`}</div></div>
@@ -104,6 +113,13 @@ function onClick(e) {
   if (a === 'tab') { view = { tab: b.dataset.v, id: '' }; return openLiveco(); }
   if (a === 'session') { view = { tab: 'lives', id: b.dataset.id }; return openLiveco(); }
   if (a === 'tiktok') { $('lv_tt').hidden = false; return; }
+  if (a === 'import') {
+    const f = $('lv_f') && $('lv_f').files && $('lv_f').files[0]; if (!f) return app.toast(t('Choisis d\'abord un fichier CSV'));
+    const mode = $('lv_m').value, title = $('lv_t').value.trim(), rd = new FileReader();
+    if (mode === 'one' && !title) return app.toast(t('Donne un nom à ce live'));
+    rd.onload = () => { const r = importExport(get(), String(rd.result || ''), { live: mode, liveTitle: title, now: new Date().toISOString() }); if (!r.report.error) put(r.state); view = { tab: r.report.error ? 'conn' : 'lives', id: '', report: r.report }; if (!r.report.error) app.toast(t('{n} commande(s) importée(s)', { n: r.report.lines })); openLiveco(); };
+    rd.onerror = () => app.toast(t('Fichier illisible')); rd.readAsText(f); return;
+  }
   if (a === 'demo') { put(loadDemo(s)); view = { tab: 'lives', id: '' }; return openLiveco(); }
   if (a === 'replay') { put(replayDemo(s)); return openLiveco(); }
   if (a === 'undemo') { const n = C.emptyState(); put(n); return openLiveco(); }
@@ -124,6 +140,25 @@ if (typeof window !== 'undefined' && window.K) {
   const K = window.K;
   K("Live connecté", "Connected live", "Live collegato", "Live conectado", "Verbundenes Live");
   K("Tes ventes de live, ton stock et le résultat de tes ballots, sans saisie", "Your live sales, your stock and the result of your bales, without typing", "Le vendite dei live, lo stock e il risultato delle balle, senza digitare", "Tus ventas de live, tu stock y el resultado de tus fardos, sin teclear", "Deine Live-Verkäufe, dein Bestand und das Ergebnis deiner Ballen, ohne Eingabe");
+  K("Import de fichier", "File import", "Importazione da file", "Importación de archivo", "Dateiimport");
+  K("Importer un export de commandes", "Import an order export", "Importa un'esportazione di ordini", "Importar una exportación de pedidos", "Bestellexport importieren");
+  K("Dans le Seller Center TikTok Shop, exporte tes commandes en CSV (si ton export est un fichier Excel, enregistre-le d'abord en CSV), puis choisis le fichier ici. Rien ne quitte cet appareil et réimporter le même fichier ne crée pas de doublon.", "In the TikTok Shop Seller Center, export your orders as CSV (if your export is an Excel file, save it as CSV first), then pick the file here. Nothing leaves this device and re-importing the same file creates no duplicates.", "Nel Seller Center di TikTok Shop esporta gli ordini in CSV (se l'esportazione è un file Excel, salvala prima come CSV), poi scegli il file qui. Nulla lascia questo dispositivo e reimportare lo stesso file non crea duplicati.", "En el Seller Center de TikTok Shop exporta tus pedidos en CSV (si la exportación es un archivo Excel, guárdala antes como CSV) y elige aquí el archivo. Nada sale de este dispositivo y reimportar el mismo archivo no crea duplicados.", "Exportiere deine Bestellungen im TikTok Shop Seller Center als CSV (ist der Export eine Excel-Datei, speichere sie zuerst als CSV) und wähle die Datei hier. Nichts verlässt dieses Gerät, und derselbe Import erzeugt keine Duplikate.");
+  K("Ces commandes viennent d'un seul live", "These orders come from a single live", "Questi ordini vengono da un solo live", "Estos pedidos vienen de un solo live", "Diese Bestellungen stammen aus einem einzigen Live");
+  K("Ce ne sont pas des ventes de live", "These are not live sales", "Non sono vendite live", "No son ventas de live", "Das sind keine Live-Verkäufe");
+  K("Nom du live (ex. Live du 10 novembre)", "Live name (e.g. Live of 10 November)", "Nome del live (es. Live del 10 novembre)", "Nombre del live (p. ej. Live del 10 de noviembre)", "Name des Lives (z. B. Live vom 10. November)");
+  K("Si ton fichier contient une colonne « Live », elle est utilisée à la place.", "If your file has a “Live” column, it is used instead.", "Se il file contiene una colonna «Live», viene usata al suo posto.", "Si tu archivo tiene una columna «Live», se usa en su lugar.", "Enthält deine Datei eine Spalte „Live“, wird sie stattdessen verwendet.");
+  K("Importer", "Import", "Importa", "Importar", "Importieren");
+  K("Choisis d'abord un fichier CSV", "Pick a CSV file first", "Scegli prima un file CSV", "Elige primero un archivo CSV", "Wähle zuerst eine CSV-Datei");
+  K("Donne un nom à ce live", "Give this live a name", "Dai un nome a questo live", "Dale un nombre a este live", "Gib diesem Live einen Namen");
+  K("Fichier illisible", "Unreadable file", "File illeggibile", "Archivo ilegible", "Datei nicht lesbar");
+  K("{n} commande(s) importée(s)", "{n} order(s) imported", "{n} ordine/i importato/i", "{n} pedido(s) importado(s)", "{n} Bestellung(en) importiert");
+  K("Le fichier est vide.", "The file is empty.", "Il file è vuoto.", "El archivo está vacío.", "Die Datei ist leer.");
+  K("Aucune commande exploitable dans ce fichier.", "No usable order in this file.", "Nessun ordine utilizzabile in questo file.", "Ningún pedido utilizable en este archivo.", "Keine verwertbare Bestellung in dieser Datei.");
+  K("Colonnes introuvables : il faut au moins le numéro de commande et la référence (ou le nom) du produit. Colonnes lues : {c}", "Columns not found: at least the order number and the product reference (or name) are needed. Columns read: {c}", "Colonne non trovate: servono almeno il numero d'ordine e il riferimento (o nome) del prodotto. Colonne lette: {c}", "Columnas no encontradas: hacen falta al menos el número de pedido y la referencia (o nombre) del producto. Columnas leídas: {c}", "Spalten nicht gefunden: mindestens Bestellnummer und Artikelreferenz (oder -name) werden benötigt. Gelesene Spalten: {c}");
+  K("{n} commande(s) lue(s) sur {r} ligne(s).", "{n} order(s) read from {r} row(s).", "{n} ordine/i letto/i su {r} riga/righe.", "{n} pedido(s) leído(s) en {r} fila(s).", "{n} Bestellung(en) aus {r} Zeile(n) gelesen.");
+  K("{n} ligne(s) ignorée(s) (sans numéro de commande ou sans référence).", "{n} row(s) ignored (no order number or no reference).", "{n} riga/righe ignorata/e (senza numero d'ordine o riferimento).", "{n} fila(s) ignorada(s) (sin número de pedido o sin referencia).", "{n} Zeile(n) ignoriert (ohne Bestellnummer oder Referenz).");
+  K("{n} ligne(s) sans montant lisible.", "{n} row(s) with no readable amount.", "{n} riga/righe senza importo leggibile.", "{n} fila(s) sin importe legible.", "{n} Zeile(n) ohne lesbaren Betrag.");
+  K("Statuts non reconnus : {s}. Ces lignes ne touchent pas au stock.", "Unrecognised statuses: {s}. These rows do not affect stock.", "Stati non riconosciuti: {s}. Queste righe non toccano lo stock.", "Estados no reconocidos: {s}. Estas filas no afectan al stock.", "Nicht erkannte Status: {s}. Diese Zeilen ändern den Bestand nicht.");
   K("Connexions", "Connections", "Collegamenti", "Conexiones", "Verbindungen");
   K("Lives", "Lives", "Live", "Lives", "Lives");
   K("Ballots", "Bales", "Balle", "Fardos", "Ballen");
