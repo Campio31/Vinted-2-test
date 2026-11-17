@@ -1,0 +1,53 @@
+import { describe, it, expect } from 'vitest';
+import { amountMinor, dateIso, importExport, mapColumns, parseCSV, readExport, statusCode, IMPORT_ACCOUNT } from '../src/modules/live-import.js';
+import { emptyState, ballotResult, sessionSummary } from '../src/modules/live-core.js';
+
+const FR = 'ID de commande;Statut de la commande;SKU vendeur;Nom du produit;Variation;Quantité;Sous-total du SKU après remise;Date de création\n'
+  + '5781;En attente d\'expédition;TEE-M-NOIR;T-shirt;Noir M;2;24,00 €;10/11/2026 20:12:00\n'
+  + '5782;Terminée;VESTE-1;"Veste ""cuir"", rare";;1;58,00 €;10/11/2026 20:20:00\n'
+  + '5783;Annulée;TEE-L-NOIR;T-shirt;Noir L;1;12,00 €;10/11/2026 20:31:00\n';
+
+describe('import CSV Live', () => {
+  it('lit le séparateur, les guillemets et les colonnes françaises', () => {
+    const r = parseCSV(FR); expect(r.length).toBe(4); expect(r[2][3]).toBe('Veste "cuir", rare');
+    const c = mapColumns(r[0]); expect(c.order).toBe(0); expect(c.sku).toBe(2); expect(c.subtotal).toBe(6); expect(c.date).toBe(7);
+  });
+  it('montants, dates, statuts', () => {
+    expect(amountMinor('12,34 €')).toBe(1234); expect(amountMinor('EUR 1 234,50')).toBe(123450); expect(amountMinor('€12.34')).toBe(1234); expect(amountMinor('1,234.50')).toBe(123450); expect(amountMinor('')).toBe(null);
+    expect(dateIso('12/11/2026 19:44:03')).toBe('2026-11-12T19:44:03'); expect(dateIso('2026-11-12 19:44')).toBe('2026-11-12T19:44:00'); expect(dateIso('n/a')).toBe('');
+    expect(statusCode('En attente d\'expédition')).toBe('AWAITING_SHIPMENT'); expect(statusCode('Annulée')).toBe('CANCELLED'); expect(statusCode('Completed')).toBe('COMPLETED'); expect(statusCode('Livrée')).toBe('DELIVERED');
+  });
+  it('un fichier sans les colonnes utiles est refusé sans rien écrire', () => {
+    const s = emptyState(), r = importExport(s, 'a;b\n1;2\n', { live: 'none' }); expect(r.report.error).toBe('colonnes_introuvables'); expect(r.state).toBe(s);
+    expect(importExport(s, '', {}).report.error).toBe('fichier_vide');
+  });
+  it('importe un live : lignes, statuts, titre, centimes', () => {
+    const r = importExport(emptyState(), FR, { live: 'one', liveTitle: 'Live du 10 novembre', now: '2026-11-11T00:00:00Z' }), s = r.state;
+    expect(r.report.lines).toBe(3); expect(r.report.unknownStatus).toEqual([]); expect(s.accounts[0].id).toBe(IMPORT_ACCOUNT); expect(s.accounts[0].manual).toBe(true);
+    expect(s.sessions.length).toBe(1); expect(s.sessions[0].title).toBe('Live du 10 novembre');
+    const L = Object.values(s.lines); expect(L.map(l => l.status).sort()).toEqual(['cancelled', 'confirmed', 'confirmed']); expect(L.find(l => l.merchantSku === 'TEE-M-NOIR').gross).toBe(2400); expect(L.find(l => l.merchantSku === 'TEE-M-NOIR').quantity).toBe(2);
+    expect(sessionSummary(s, s.sessions[0].id)).toBeTruthy();
+  });
+  it('réimporter le même fichier ne change rien', () => {
+    const a = importExport(emptyState(), FR, { live: 'one', liveTitle: 'L', now: 'x' }).state, b = importExport(a, FR, { live: 'one', liveTitle: 'L', now: 'x' }).state;
+    expect(b).toEqual(a); expect(Object.keys(b.lines).length).toBe(3);
+  });
+  it('un export plus récent met à jour le statut', () => {
+    const a = importExport(emptyState(), FR, { live: 'none' }).state, b = importExport(a, FR.replace('En attente d\'expédition', 'Livrée'), { live: 'none' }).state;
+    expect(Object.values(a.lines).find(l => l.merchantSku === 'TEE-M-NOIR').rawStatus).toBe('AWAITING_SHIPMENT'); expect(Object.values(b.lines).find(l => l.merchantSku === 'TEE-M-NOIR').rawStatus).toBe('DELIVERED');
+  });
+  it('hors live : aucune session créée ; statut inconnu signalé ; deux fois la même référence dans une commande', () => {
+    const csv = 'Order ID,Order Status,Seller SKU,Quantity,Unit Price\n9,Bizarre,A1,1,5.50\n9,Bizarre,A1,2,5.50\n10,,,1,3\n';
+    const r = importExport(emptyState(), csv, { live: 'none' }); expect(r.state.sessions.length).toBe(0); expect(r.report.lines).toBe(2); expect(r.report.skipped.length).toBe(1); expect(r.report.unknownStatus).toEqual(['Bizarre']);
+    const L = Object.values(r.state.lines); expect(L.length).toBe(2); expect(L.map(l => l.gross).sort((a, b) => a - b)).toEqual([550, 1100]);
+  });
+  it('une colonne Live du fichier prime', () => {
+    const { raws, report } = readExport('Order ID;SKU;Live\n1;A;L-1\n2;B;L-2\n3;C;\n', { live: 'one', liveTitle: 'Défaut' }); expect(report.lives.sort()).toEqual(['L-1', 'L-2', 'csv-defaut']); expect(raws[0].liveId).toBe('L-1');
+  });
+  it('le ballot exclusif utilise les ventes importées', async () => {
+    const { addBallot, setSessionMode, addRule } = await import('../src/modules/live-core.js');
+    let s = importExport(emptyState(), FR, { live: 'one', liveTitle: 'Live', now: '' }).state; const b = addBallot(s, { label: 'B', landedCost: '100,00' }); s = b.state; const q = s.sessions[0].id;
+    s = setSessionMode(s, q, 'exclusive_ballot'); s = addRule(s, { sessionId: q, ballotId: b.id, isDefault: true }).state; const res = ballotResult(s, b.id);
+    expect(res).toBeTruthy(); expect(JSON.stringify(res)).toContain('8200');
+  });
+});
